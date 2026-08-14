@@ -113,9 +113,11 @@ body {
 @keyframes updPulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
 /* ── Settings Modal ─────────────────────────────────────────── */
+/* z-index 500: must render ABOVE .login-overlay (400) — settings can be
+   opened from the login card itself (loginSettingsBtn), before login. */
 .settings-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.35);
-  z-index: 400; display: none; align-items: center; justify-content: center; padding: 20px;
+  z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px;
 }
 .settings-overlay.open { display: flex; }
 .settings-modal {
@@ -153,9 +155,11 @@ body {
 .btn-modal-save:hover { background: var(--accent-dark); }
 
 /* ── Changelog Modal ────────────────────────────────────────── */
+/* z-index 500: same modal tier as .settings-overlay / .modal-overlay —
+   always above .login-overlay (400). See z-index scale note above §LOGIN. */
 .changelog-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.45);
-  z-index: 400; display: none; align-items: center; justify-content: center; padding: 20px;
+  z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px;
 }
 .changelog-overlay.open { display: flex; }
 .changelog-modal {
@@ -197,6 +201,14 @@ body {
 
 
 /* ── Login Overlay ─────────────────────────────────────────── */
+/* Z-INDEX SCALE (mandatory — keep every overlay in this file on this scale):
+     .login-overlay                          → 400  (base full-screen layer)
+     .settings-overlay / .changelog-overlay /
+     .modal-overlay (about, courier search…) → 500  (modal tier — always ABOVE login)
+     .toast-container                        → 9999 (always on top)
+   Any modal reachable from the login card (e.g. settings) MUST be > 400,
+   or it opens (display:flex) but renders behind the opaque login screen —
+   looks like "the button does nothing". */
 .login-overlay {
   position: fixed; inset: 0;
   background: var(--bg);
@@ -454,7 +466,8 @@ body {
         --accent-b: #bfdbfe; }
 
 /* ── About Modal ─────────────────────────────────────────────── */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 420;
+/* z-index 500: same modal tier as .settings-overlay / .changelog-overlay. */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 500;
   display: none; align-items: center; justify-content: center; padding: 20px; }
 .modal-overlay.open { display: flex; }
 .modal-box { background: var(--surface); border-radius: var(--radius); width: 100%;
@@ -719,7 +732,7 @@ details[open] > .about-summary { border-radius: 8px 8px 0 0; }
     </div>
     <button class="hbtn active-user" id="activeUserBtn" onclick="doLogout()">👤 —</button>
     <button class="hbtn" onclick="openAbout()">ℹ️ عن الأداة</button>
-    <button class="hbtn ver-btn" onclick="openChangelog()">v2.0.0 📋</button>
+    <button class="hbtn ver-btn" onclick="openChangelog()">v2.0.1 📋</button>
     <button class="hbtn" id="settingsBtn" onclick="openSettings()">⚙️ الإعدادات</button>
   </div>
 </div>
@@ -766,7 +779,16 @@ details[open] > .about-summary { border-radius: 8px 8px 0 0; }
     <div class="changelog-body">
       <div class="cl-version-block">
         <div class="cl-version-row">
-          <span class="cl-ver-badge">v2.0.0</span>
+          <span class="cl-ver-badge">v2.0.1</span>
+          <span class="cl-ver-date">14-08-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>زرار "⚙️ الإعدادات" في شاشة الدخول كان بيفتح بس بيظهر خلف شاشة تسجيل الدخول (نفس z-index) — تم فصل طبقة النوافذ المنبثقة عن طبقة شاشة الدخول.</span></li>
+        </ul>
+      </div>
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.0.0</span>
           <span class="cl-ver-date">12-08-2026</span>
         </div>
         <ul class="cl-items">
@@ -1717,7 +1739,7 @@ let currentCourier   = '';
 let orders           = [];   // [orderId, ...] newest first
 const orderInfo      = {};   // orderId → { name, s1, s2, isCancelled }
 let lastBatch        = null; // { batchId, specifier, courier, orderIds[] } — for manifest
-let isUpdating       = false;
+let isUpdating        = false;
 
 function isTransitionValid(specifier, s1, s2) {
   const rule = TRANSITION_RULES[specifier];
