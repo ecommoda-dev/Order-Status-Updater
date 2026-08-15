@@ -113,11 +113,9 @@ body {
 @keyframes updPulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
 /* ── Settings Modal ─────────────────────────────────────────── */
-/* z-index 500: must render ABOVE .login-overlay (400) — settings can be
-   opened from the login card itself (loginSettingsBtn), before login. */
 .settings-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.35);
-  z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px;
+  z-index: 450; display: none; align-items: center; justify-content: center; padding: 20px;
 }
 .settings-overlay.open { display: flex; }
 .settings-modal {
@@ -155,11 +153,9 @@ body {
 .btn-modal-save:hover { background: var(--accent-dark); }
 
 /* ── Changelog Modal ────────────────────────────────────────── */
-/* z-index 500: same modal tier as .settings-overlay / .modal-overlay —
-   always above .login-overlay (400). See z-index scale note above §LOGIN. */
 .changelog-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.45);
-  z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px;
+  z-index: 450; display: none; align-items: center; justify-content: center; padding: 20px;
 }
 .changelog-overlay.open { display: flex; }
 .changelog-modal {
@@ -201,14 +197,6 @@ body {
 
 
 /* ── Login Overlay ─────────────────────────────────────────── */
-/* Z-INDEX SCALE (mandatory — keep every overlay in this file on this scale):
-     .login-overlay                          → 400  (base full-screen layer)
-     .settings-overlay / .changelog-overlay /
-     .modal-overlay (about, courier search…) → 500  (modal tier — always ABOVE login)
-     .toast-container                        → 9999 (always on top)
-   Any modal reachable from the login card (e.g. settings) MUST be > 400,
-   or it opens (display:flex) but renders behind the opaque login screen —
-   looks like "the button does nothing". */
 .login-overlay {
   position: fixed; inset: 0;
   background: var(--bg);
@@ -466,8 +454,7 @@ body {
         --accent-b: #bfdbfe; }
 
 /* ── About Modal ─────────────────────────────────────────────── */
-/* z-index 500: same modal tier as .settings-overlay / .changelog-overlay. */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 500;
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 420;
   display: none; align-items: center; justify-content: center; padding: 20px; }
 .modal-overlay.open { display: flex; }
 .modal-box { background: var(--surface); border-radius: var(--radius); width: 100%;
@@ -503,14 +490,6 @@ details[open] > .about-summary { border-radius: 8px 8px 0 0; }
   border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
   overflow-x: auto; white-space: pre; direction: ltr; text-align: left;
   line-height: 1.65; color: var(--text); margin: 0; }
-
-/* ── Write-mode badge ────────────────────────────────────────── */
-.wm-badge { display: flex; align-items: center; gap: 6px; font-size: 11px;
-  padding: 3px 10px; border-radius: 20px; border: 1px solid; white-space: nowrap;
-  font-weight: 700; }
-.wm-badge.flow   { background: var(--amber-light); border-color: #fde68a; color: var(--amber); }
-.wm-badge.direct { background: var(--purple-light); border-color: var(--purple-border); color: var(--purple); }
-.wm-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 /* ── Tool layout ─────────────────────────────────────────────── */
 .tool-grid { display: grid; grid-template-columns: 230px 1fr 300px; gap: 12px; align-items: start; }
@@ -697,7 +676,7 @@ details[open] > .about-summary { border-radius: 8px 8px 0 0; }
 .log-tag.s1 { background: var(--accent-light); color: var(--accent); border-color: var(--accent-b); }
 .log-tag.s2 { background: var(--amber-light);  color: var(--amber);  border-color: #fde68a; }
 .log-tag.cr { background: var(--purple-light); color: var(--purple); border-color: var(--purple-border); }
-.log-tag.emp{ background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.log-tag.emp{ background: var(--accent-light); color: var(--accent-dark); border-color: var(--accent-b); }
 .log-tag.mode-direct { background: var(--purple-light); color: var(--purple); border-color: var(--purple-border); }
 .log-tag.mode-flow   { background: var(--amber-light);  color: var(--amber);  border-color: #fde68a; }
 .log-ok  { color: var(--green); font-weight: 700; }
@@ -727,12 +706,9 @@ details[open] > .about-summary { border-radius: 8px 8px 0 0; }
     </div>
   </div>
   <div class="app-header-btns">
-    <div class="wm-badge flow" id="wmBadge" style="display:none">
-      <span class="dot"></span><span id="wmBadgeText">—</span>
-    </div>
     <button class="hbtn active-user" id="activeUserBtn" onclick="doLogout()">👤 —</button>
     <button class="hbtn" onclick="openAbout()">ℹ️ عن الأداة</button>
-    <button class="hbtn ver-btn" onclick="openChangelog()">v2.0.1 📋</button>
+    <button class="hbtn ver-btn" onclick="openChangelog()">v2.1.0 📋</button>
     <button class="hbtn" id="settingsBtn" onclick="openSettings()">⚙️ الإعدادات</button>
   </div>
 </div>
@@ -757,10 +733,6 @@ details[open] > .about-summary { border-radius: 8px 8px 0 0; }
         <label class="settings-label">ADMIN WORKER URL</label>
         <input type="text" class="settings-input" id="cfgAdminUrl" />
       </div>
-      <div class="settings-field">
-        <label class="settings-label">FLOW COMPANION TOKEN</label>
-        <input type="password" class="settings-input" id="cfgFlowToken" />
-      </div>
     </div>
     <div class="settings-modal-ftr">
       <button class="btn-modal-cancel" onclick="closeSettings()">إلغاء</button>
@@ -779,11 +751,21 @@ details[open] > .about-summary { border-radius: 8px 8px 0 0; }
     <div class="changelog-body">
       <div class="cl-version-block">
         <div class="cl-version-row">
-          <span class="cl-ver-badge">v2.0.1</span>
-          <span class="cl-ver-date">14-08-2026</span>
+          <span class="cl-ver-badge">v2.1.0</span>
+          <span class="cl-ver-date">12-08-2026</span>
         </div>
         <ul class="cl-items">
-          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>زرار "⚙️ الإعدادات" في شاشة الدخول كان بيفتح بس بيظهر خلف شاشة تسجيل الدخول (نفس z-index) — تم فصل طبقة النوافذ المنبثقة عن طبقة شاشة الدخول.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>إزالة Shopify Flow / Flow Companion نهائياً — الأداة تكتب الميتافيلدز مباشرة في كل الحالات، لا يوجد وضع كتابة بديل.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>حذف حقل FLOW COMPANION TOKEN من الإعدادات وشارة وضع الكتابة من الهيدر — لم تعد هناك حاجة لهما.</span></li>
+        </ul>
+      </div>
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v2.0.1</span>
+          <span class="cl-ver-date">12-08-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>إزالة endpoint النقل المؤقت (<code>import_logs</code>) من الـ Worker بعد اكتمال نقل بيانات KV بنجاح والتحقق منها.</span></li>
         </ul>
       </div>
       <div class="cl-version-block">
@@ -850,7 +832,7 @@ details[open] > .about-summary { border-radius: 8px 8px 0 0; }
 
           <div class="about-label">الـ Endpoints الرئيسية</div>
           <div class="about-endpoints">
-            <div class="about-ep"><code>get_config</code><span>وضع الكتابة الحالي (flow / direct) ورقم النسخة</span></div>
+            <div class="about-ep"><code>get_config</code><span>رقم نسخة الـ Worker ووقت السيرفر (لعرضها في الهيدر)</span></div>
             <div class="about-ep"><code>courier_values</code><span>قائمة المناديب من تعريف ميتافيلد courier</span></div>
             <div class="about-ep"><code>resolve_by_name</code><span>رقم الأوردر (#XXXXX) ← الـ ID الرقمي</span></div>
             <div class="about-ep"><code>resolve_orders</code><span>الـ IDs الرقمية ← أسماء الأوردرات</span></div>
@@ -880,8 +862,7 @@ Status prefetch + validation │ HTML   │ §TOOL-JS       │ order_statuses
 Courier order search         │ HTML   │ §TOOL-JS       │ search_courier_orders
 Batch update (20 per call)   │ HTML   │ §TOOL-JS       │ update_status
 Transition validation        │ Worker │ §STATUS        │ isTransitionValid()
-Direct Shopify writes        │ Worker │ §STATUS        │ applyDirect()
-Flow Companion path          │ Worker │ §STATUS        │ applyFlow()
+Direct Shopify writes         │ Worker │ §STATUS        │ applyDirect()
 Manifest print (barcode)     │ HTML   │ §TOOL-JS       │ order_details
 Log display + batch grouping │ HTML   │ §LOG-JS        │ get_logs
 XLSX export                  │ HTML   │ §LOG-JS        │ get_logs_export
@@ -892,19 +873,15 @@ KEY VARIABLES (HTML)
 LS_URL       = 'order_status_worker_url'
 LS_SECRET    = 'order_status_worker_secret'
 LS_ADMIN_URL = 'admin_worker_url'        (shared — never rename)
-LS_FLOWTOKEN = 'order_status_flow_token'
 UPDATE_CHUNK = 20                         (orders per update_status call)
 LOG_PAGE_SIZE = 100
 
-WORKER ENV (Dashboard)
-WRITE_MODE        = flow | direct
-DIRECT_SPECIFIERS = CSV allow-list for gradual cutover (overrides WRITE_MODE)
-
 NOTES
-- The 8 specifiers map to 8 Shopify Flows. In direct mode the Worker performs
-  the same actions itself: orderCancel (Cancelled/Returned), fulfillmentCancel
+- The 8 specifiers correspond to what used to be 8 separate Shopify Flows
+  (retired in v2.1.0). The Worker now performs those same Shopify actions
+  itself, directly: orderCancel (Cancelled/Returned), fulfillmentCancel
   (Ready/Ready_S2), fulfillmentCreate (Shipped/Shipped_S2), and
-  reverseFulfillmentOrderDispose (Returned_S2).
+  reverseFulfillmentOrderDispose (Returned_S2). There is no other write path.
 - S2 specifiers store a CLEAN label: Ready_S2 writes "Ready", not "Ready_S2".
 - Validation runs in BOTH places. The browser copy is for instant feedback;
   the Worker copy is authoritative and cannot be bypassed.
@@ -913,6 +890,9 @@ NOTES
 - The log stores one D1 row per order. batchId groups them back into one
   visual operation — a batch may split across two pages when it exceeds the
   page size; the data is complete, only the grouping looks split.
+- Log rows migrated from the old KV-based tool (or written before v2.1.0)
+  may carry extra.writeMode = "flow" — the log tab still displays a "Flow"
+  tag for those historical rows; it is not a live option anymore.
 - currentEmployee lives in JS memory only. Refresh = re-login, by design.
 - Cairo is UTC+3. Egypt DST ends 29-10-2026 → both toCairo() here and
   CAIRO_OFFSET_HOURS in the Worker must change to +2 on that date.</pre>
@@ -1209,14 +1189,12 @@ NOTES
 const LS_URL       = 'order_status_worker_url';
 const LS_SECRET    = 'order_status_worker_secret';
 const LS_ADMIN_URL = 'admin_worker_url';          // shared across tools — never rename
-const LS_FLOWTOKEN = 'order_status_flow_token';   // Flow Companion token (localStorage only)
 
 function getConfig() {
   return {
     workerUrl:    localStorage.getItem(LS_URL)       || '',
     workerSecret: localStorage.getItem(LS_SECRET)    || '',
     adminUrl:     localStorage.getItem(LS_ADMIN_URL) || '',
-    flowToken:    localStorage.getItem(LS_FLOWTOKEN) || '',
   };
 }
 
@@ -1255,10 +1233,9 @@ async function apiGet(action, params = {}) {
 // ══════════════════════════════════════════════════════════════
 function openSettings() {
   const c = getConfig();
-  document.getElementById('cfgUrl').value       = c.workerUrl;
-  document.getElementById('cfgSecret').value    = c.workerSecret;
-  document.getElementById('cfgAdminUrl').value  = c.adminUrl;
-  document.getElementById('cfgFlowToken').value = c.flowToken;
+  document.getElementById('cfgUrl').value      = c.workerUrl;
+  document.getElementById('cfgSecret').value   = c.workerSecret;
+  document.getElementById('cfgAdminUrl').value = c.adminUrl;
   document.getElementById('settingsOverlay').classList.add('open');
 }
 function closeSettings()            { document.getElementById('settingsOverlay').classList.remove('open'); }
@@ -1272,7 +1249,6 @@ function saveSettings() {
   localStorage.setItem(LS_URL,       url.replace(/\/$/, ''));
   localStorage.setItem(LS_SECRET,    secret);
   localStorage.setItem(LS_ADMIN_URL, document.getElementById('cfgAdminUrl').value.trim().replace(/\/$/, ''));
-  localStorage.setItem(LS_FLOWTOKEN, document.getElementById('cfgFlowToken').value.trim());
 
   updateSettingsButtonsState();
   closeSettings();
@@ -1627,7 +1603,6 @@ async function finishLogin(username, displayName) {
 
   // ── CUSTOMIZE: post-login actions ──────────────────────────
   document.getElementById('activeUserBtn').textContent = `👤 ${displayName}`;
-  loadWriteMode();
   loadEmployeeFilter();
   if (!currentField) selectField('S1');
   setTimeout(focusScan, 120);
@@ -1668,7 +1643,6 @@ async function doLogout() {
   document.getElementById('activeUserBtn').textContent = '👤 —';
   document.getElementById('resWrap').classList.remove('on');
   document.getElementById('progWrap').classList.remove('on');
-  document.getElementById('wmBadge').style.display = 'none';
   logLoaded = false; logCurrentPage = 1;
   switchMainTab('main');
   // ──────────────────────────────────────────────────────────
@@ -1739,7 +1713,7 @@ let currentCourier   = '';
 let orders           = [];   // [orderId, ...] newest first
 const orderInfo      = {};   // orderId → { name, s1, s2, isCancelled }
 let lastBatch        = null; // { batchId, specifier, courier, orderIds[] } — for manifest
-let isUpdating        = false;
+let isUpdating       = false;
 
 function isTransitionValid(specifier, s1, s2) {
   const rule = TRANSITION_RULES[specifier];
@@ -2045,7 +2019,6 @@ async function startUpdate() {
        <span class="res-badge wait">⏳</span>
      </div>`).join('');
 
-  const cfg = getConfig();
   let okCount = 0, errCount = 0, done = 0;
   const succeeded = [];
   let batchId = null;
@@ -2058,7 +2031,6 @@ async function startUpdate() {
         specifier: currentSpecifier,
         courier:   spec.courier ? currentCourier : '',
         employee:  currentEmployee?.username || '',
-        flowToken: cfg.flowToken,
       });
       batchId = batchId || data.batchId;
       for (const r of (data.results || [])) {
@@ -2282,21 +2254,6 @@ setTimeout(function(){window.print()},400)};<\/script>
   const win = window.open('', '_blank');
   win.document.write(html);
   win.document.close();
-}
-
-// ─── §TOOL-JS::loadWriteMode ───
-async function loadWriteMode() {
-  try {
-    const c = await apiGet('get_config');
-    const badge = document.getElementById('wmBadge');
-    const isDirect = c.writeMode === 'direct' || (c.directSpecifiers || []).length > 0;
-    badge.style.display = 'flex';
-    badge.className = `wm-badge ${isDirect ? 'direct' : 'flow'}`;
-    document.getElementById('wmBadgeText').textContent =
-      (c.directSpecifiers || []).length
-        ? `كتابة مباشرة: ${c.directSpecifiers.join(', ')}`
-        : (c.writeMode === 'direct' ? 'كتابة مباشرة (Direct)' : 'عبر Shopify Flow');
-  } catch { /* badge stays hidden */ }
 }
 
 // Keep focus on the scanner when clicking empty areas
