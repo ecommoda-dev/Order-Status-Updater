@@ -486,6 +486,13 @@ body {
 .otbl tbody td:first-child { border-inline-start: none; }
 .otbl td.c-name { font-weight: 800; }
 .otbl td.c-id { font-family: var(--mono); font-size: 11px; color: var(--text-muted); direction: ltr; }
+/* سبب الإلغاء/الإرجاع — عمود في جدول الأوردرات، Cancelled/Returned فقط (v4.0.0)، إلزامي بس لأوردرات S1 (v4.1.0) */
+.reason-select { width: 100%; min-width: 170px; max-width: 240px; padding: 6px 8px; border-radius: 7px; border: 1.5px solid var(--border-strong); background: var(--surface); font-family: inherit; font-size: 12px; color: var(--text-primary); outline: none; cursor: pointer; transition: border-color .15s, background .15s; }
+.reason-select:focus { border-color: var(--accent); }
+.reason-select:disabled { opacity: .6; cursor: not-allowed; }
+.reason-select.reason-missing { border-color: var(--red); background: var(--red-light); color: var(--red); font-weight: 700; }
+/* v4.1.0 — خانة "مش مطلوب" لصفوف Returned اللي بتتحل S2 (السبب مش مطلوب فيها) */
+.reason-na { color: var(--text-muted); font-size: 12px; font-style: italic; }
 .del-x { background: none; border: none; color: var(--red); font-size: 15px; cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 5px; }
 .del-x:hover { background: var(--red-light); }
 .pill { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid; }
@@ -821,7 +828,30 @@ body {
 
       <div class="cl-version-block">
         <div class="cl-version-row">
-          <span class="cl-ver-badge" id="clLatestVerBadge">v3.7.0</span>
+          <span class="cl-ver-badge" id="clLatestVerBadge">v4.1.0</span>
+          <span class="cl-ver-date">23-08-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>سبب الإلغاء/الإرجاع بقى إلزامي بس لما التحديث يتحل فعليًا لـ S1</strong> — يعني <code>Cancelled</code>، أو <code>Returned</code> لما تُحل S1 (مش S2). لما أوردر <code>Returned</code> يتحل S2 (<code>Returned_S2</code> — الأوردر كان أصلاً في مسار استرجاع/استبدال S2) السبب <strong>مش بيتكتب ومش مطلوب</strong> — الأوردر بيوري خانة "مش مطلوب" بدل قائمة الاختيار في الجدول. السبب: في مسار S2 غالبًا فريق خدمة العملاء يكون سجّل سبب الاسترجاع/الاستبدال وقت إنشاء الطلب، قبل ما نوصل لتحديث الحالة هنا.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>الفحص الإلزامي (زرار "تحديث الكل" + الرسالة التحذيرية) بقى لكل أوردر لوحده حسب مساره الفعلي (S1/S2)، مش على مستوى الحالة المستهدفة ككل زي v4.0.0. متطلب Worker v4.1.0+.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v4.0.0</span>
+          <span class="cl-ver-date">23-08-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>عمود جديد "سبب الإلغاء/الإرجاع" في جدول الأوردرات</strong> — يظهر فقط لما الحالة المستهدفة تكون <code>Cancelled</code> أو <code>Returned</code>، وهو قائمة اختيار (dropdown) مسحوبة مباشرة من قوائم الميتافيلدز <code>custom.cancel_manual_reason</code> / <code>custom.return_manual_reason</code> على شوبيفاي (Worker endpoint جديد <code>reason_values</code>). السبب <strong>إلزامي لكل أوردر</strong> — زرار "تحديث الكل" يفضل معطّل لحد ما كل الأوردرات المضافة عليها سبب مختار. <em>(دقّقها v4.1.0 — بس لأوردرات S1، شوف فوق.)</em></span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>السبب المختار بيتسجّل على الأوردر في نفس نداء <code>metafieldsSet</code> اللي بيكتب الحالة (<code>custom.manual_status</code> / <code>custom.status_2_r_e</code>) — كتابة واحدة ذرية، ولو شوبيفاي رفضت القيمة (خارج قائمة الاختيارات المعرّفة في تعريف الميتافيلد) الأوردر بالكامل يترفض بدل ما تتكتب الحالة والسبب ينفصل عنها. متطلب Worker v4.0.0+.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>السبب بيتسجّل كمان في سجل العمليات (D1، <code>extra.reason</code>) لكل صف تحديث Cancelled/Returned.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v3.7.0</span>
           <span class="cl-ver-date">23-08-2026</span>
         </div>
         <ul class="cl-items">
@@ -1013,6 +1043,7 @@ body {
             <li>تسجيل الدخول بالـ PIN — كل عملية تُنسب للموظف الذي نفّذها.</li>
             <li>اختيار الحالة المستهدفة فقط (Ready / Shipped / Delivered / Cancelled / Returned) من خطوة 1 — عند الاختيار يظهر بادج كبير باسم الحالة في منتصف الخطوة وزرار "تغيير الحالة" تحته (نفس تصميم تأكيد المندوب في v3.3.0)، وخلفية القسم كله بتاخد لون الحالة القوي الصريح.</li>
             <li>إضافة الأوردرات: سكانر، رقم يدوي، أو "بحث عن أوردرات مندوب معيّن" (متاح للحالات التي تتطلب مندوب) — بما فيها خيار "🚫 بدون مندوب" لجلب الأوردرات اللي مفيش عليها مندوب مسجَّل خالص. كل أوردر يُصنَّف تلقائياً S1 أو S2 فور إضافته، وأي انتقال غير مسموح يظهر بخلفية حمراء واضحة ويمنع التحديث حتى يُحذف. الجدول مقفول تلقائياً إلا لو فيه خطأ، وحذف أوردر منه بيحافظ على حالة الفتح/القفل الحالية.</li>
+            <li><strong>سبب الإلغاء/الإرجاع (v4.0.0، دقّقها v4.1.0):</strong> لو الحالة المستهدفة <code>Cancelled</code> أو <code>Returned</code>، عمود إضافي "سبب الإلغاء/الإرجاع" يظهر جنب كل أوردر في الجدول — قائمة اختيار مسحوبة من الميتافيلدز <code>custom.cancel_manual_reason</code> / <code>custom.return_manual_reason</code>. الاختيار <strong>إلزامي بس للأوردرات اللي هتتحل فعليًا S1</strong> (<code>Cancelled</code>، أو <code>Returned</code> لما S2 يكون فاضي) — زرار "تحديث الكل" يفضل معطّل والسطر بيتلوّن أحمر لحد ما يتم اختيار سبب لكل أوردر S1 مضاف. أوردر <code>Returned</code> اللي هيتحل S2 (<code>Returned_S2</code>) بيوري خانة "— (S2، غير مطلوب) —" بدل قائمة الاختيار، والسبب مش مطلوب ولا بيتكتب عليه.</li>
             <li>تأكيد المندوب: الأوردرات المضافة بتتجمّع في مجموعات باسم المندوب (بما فيها "بدون مندوب" كمجموعة عرض للأوردرات اللي مفيش عليها مندوب مسجَّل). لو مجموعة واحدة حقيقية بس، تظهر كاقتراح يتأكد بضغطة واحدة. لو أكتر من مجموعة، تتعرض كلها في جدول (اسم المندوب / عدد الأوردرات / أرقام الأوردرات) ولازم اختيار يدوي صريح. "بدون مندوب" مينفعش يتختار أبداً كمندوب نهائي — صفها بيظهر معطّل في الجدول، ولازم اختيار مندوب حقيقي من "📋 اختار مندوب آخر".</li>
             <li>الضغط على "تحديث الكل" — تُرسل الأوردرات للـ Worker على دفعات من 20، والـ Worker يتحقق من الانتقال ويحسم S1/S2 لكل أوردر بنفسه قبل التنفيذ.</li>
             <li>بعد انتهاء التحديث تظهر <strong>نافذة ملخص منبثقة</strong> (v3.6.0) فيها أرقام النتيجة بس — ناجح / محتاج مراجعة / فاشل — من غير تفاصيل أوردرات، ولما يكون فيه فشل بتتلوّن أحمر بالكامل وبيظهر بانر تنبيه. منها الموظف بيختار: 🆕 تسجيل أوردرات جديدة (إعادة ضبط كاملة لخطوة 1) · 📜 تفاصيل الأوردرات (يفتح تاب سجل العمليات) · 🖨️ طباعة (في حالة Shipped فقط).</li>
@@ -1026,6 +1057,7 @@ body {
             <tr><th>action</th><th>الوصف</th></tr>
             <tr><td><code>get_config</code></td><td>رقم نسخة الـ Worker ووقت السيرفر</td></tr>
             <tr><td><code>courier_values</code></td><td>قائمة المناديب من تعريف ميتافيلد courier</td></tr>
+            <tr><td><code>reason_values</code></td><td>قوائم أسباب الإلغاء/الإرجاع من تعريفي ميتافيلد <code>custom.cancel_manual_reason</code> و<code>custom.return_manual_reason</code> (v4.0.0). القوائم نفسها ما اتغيّرتش في v4.1.0 — التعديل كان في مين يُطلب منه اختيار سبب، مش في مصدر القوائم.</td></tr>
             <tr><td><code>resolve_by_name</code></td><td>رقم الأوردر (#XXXXX) ← الـ ID الرقمي</td></tr>
             <tr><td><code>resolve_orders</code></td><td>الـ IDs الرقمية ← أسماء الأوردرات</td></tr>
             <tr><td><code>order_statuses</code></td><td>S1/S2/المندوب الحالية + حالة الإلغاء والـ fulfillment لكل أوردر</td></tr>
@@ -1045,9 +1077,9 @@ body {
             <tr><td><code>Shipped</code></td><td>كتابة <code>custom.manual_status</code> ← كتابة <code>custom.pickup_date</code> (تاريخ اليوم Cairo) ← كتابة <code>custom.courier</code> ← Fulfill (<code>fulfillmentCreate</code> لكل fulfillment orders المفتوحة)</td></tr>
             <tr><td><code>Shipped</code> (S2)</td><td>كتابة <code>custom.status_2_r_e</code> ← كتابة <code>custom.pickup_date</code> (تاريخ اليوم Cairo) ← كتابة <code>custom.courier</code> ← Fulfill (<code>fulfillmentCreate</code> لكل fulfillment orders المفتوحة)</td></tr>
             <tr><td><code>Delivered</code></td><td>كتابة <code>custom.manual_status</code> ← كتابة <code>custom.courier</code></td></tr>
-            <tr><td><code>Cancelled</code></td><td>إلغاء الأوردر (<code>orderCancel</code>) ← كتابة <code>custom.manual_status</code></td></tr>
-            <tr><td><code>Returned</code></td><td>إلغاء الأوردر (<code>orderCancel</code>) ← كتابة <code>custom.manual_status</code> (مفيش كتابة مندوب — <code>Returned</code> مُستثناة من كتابة <code>custom.courier</code>)</td></tr>
-            <tr><td><code>Returned</code> (S2)</td><td>كتابة <code>custom.status_2_r_e</code> (مفيش كتابة مندوب — <code>Returned_S2</code> مُستثناة من كتابة <code>custom.courier</code>) ← إرجاع كل قطعة مرتجعة للمخزون (<code>reverseFulfillmentOrderDispose</code>)</td></tr>
+            <tr><td><code>Cancelled</code></td><td>إلغاء الأوردر (<code>orderCancel</code>) ← كتابة <code>custom.manual_status</code> + <code>custom.cancel_manual_reason</code> (السبب المختار — إلزامي، في نفس نداء <code>metafieldsSet</code>)</td></tr>
+            <tr><td><code>Returned</code></td><td>إلغاء الأوردر (<code>orderCancel</code>) ← كتابة <code>custom.manual_status</code> + <code>custom.return_manual_reason</code> (السبب المختار — إلزامي، في نفس نداء <code>metafieldsSet</code>) (مفيش كتابة مندوب — <code>Returned</code> مُستثناة من كتابة <code>custom.courier</code>)</td></tr>
+            <tr><td><code>Returned</code> (S2)</td><td>كتابة <code>custom.status_2_r_e</code> فقط — <strong>مفيش كتابة سبب</strong> (v4.1.0: السبب بقى بس لـ <code>Returned</code> S1، شوف فوق) (مفيش كتابة مندوب — <code>Returned_S2</code> مُستثناة من كتابة <code>custom.courier</code>) ← إرجاع كل قطعة مرتجعة للمخزون (<code>reverseFulfillmentOrderDispose</code>)</td></tr>
           </table>
         </div>
       </details>
@@ -1065,6 +1097,7 @@ body {
             <li><code>جدول الأوردرات القابل للطي — الصف كله قابل للضغط (auto-collapse يحترم اختيار المستخدم)</code> — HTML §TOOL-JS — <code>applyAutoCollapseRule()</code> / <code>toggleOrdersTable()</code></li>
             <li><code>تأكيد المندوب — تجميع بالمجموعات في جدول (اسم/عدد/أرقام أوردرات) + تأكيد صريح دايماً + "بدون مندوب" لا يُختار أبداً</code> — HTML §TOOL-JS — <code>renderCourierStep()</code> / <code>groupTableHTML()</code> / <code>chooseCourier()</code> / <code>openCourierPicker()</code></li>
             <li><code>بحث أوردرات مندوب (S1+S2 مدموجين) + خيار "بدون مندوب"</code> — HTML §TOOL-JS — <code>openCourierSearch()</code> — Worker §STATUS — <code>search_courier_orders</code> (<code>noCourier</code>)</li>
+            <li><code>سبب الإلغاء/الإرجاع — عمود في جدول الأوردرات، Cancelled/Returned فقط، إلزامي بس لأوردرات S1 (v4.0.0، دقّقها v4.1.0)</code> — HTML §TOOL-JS — <code>needsReasonFor()</code> / <code>orderNeedsReason()</code> / <code>reasonSelectHTML()</code> / <code>setOrderReason()</code> / <code>ensureReasonValues()</code> — Worker §STATUS — <code>reason_values</code> / <code>applyDirect()</code></li>
             <li><code>تحديث الكل (دفعات 20)</code> — HTML §TOOL-JS — <code>doStartUpdate()</code></li>
             <li><code>التحقق من الانتقال (سلطة نهائية)</code> — Worker §STATUS — <code>isTransitionValid()</code></li>
             <li><code>الكتابة على Shopify + مسح المندوب عند Ready</code> — Worker §STATUS — <code>applyDirect()</code> / §SHOPIFY — <code>deleteMetafields()</code></li>
@@ -1079,7 +1112,10 @@ body {
 
           <h4>KEY VARIABLES (HTML)</h4>
           <ul>
-            <li><code>TOOL_VERSION = '3.7.0'</code> — المصدر الوحيد لرقم النسخة (زرار الهيدر + بادج آخر نسخة في سجل التحديثات + نص شاشة الدخول) عن طريق <code>renderVersionUI()</code>. لازم يساوي <code>VERSION</code> في الـ Worker.</li>
+            <li><code>TOOL_VERSION = '4.1.0'</code> — المصدر الوحيد لرقم النسخة (زرار الهيدر + بادج آخر نسخة في سجل التحديثات + نص شاشة الدخول) عن طريق <code>renderVersionUI()</code>. لازم يساوي <code>VERSION</code> في الـ Worker.</li>
+            <li><code>orderReasons[id]</code> — السبب المختار لكل أوردر (v4.0.0)، بيتعرض/بيتطلب بس للأوردرات اللي <code>orderNeedsReason(id)</code> بترجع لها true (v4.1.0 — يعني الأوردر هيتحل S1 فعليًا). بيتصفّر عند تغيير الحالة المستهدفة (<code>selectTargetLabel()</code>)، مسح الكل، أو تسجيل خروج — وبيتنضّف لكل أوردر لوحده عند حذفه أو بعد نجاح تحديثه.</li>
+            <li><code>reasonValuesCache</code> — <code>{ cancelReasons:[...], returnReasons:[...] }</code> من <code>reason_values</code> (v4.0.0) — بيتحمّل مرة واحدة (lazy، أول ما تُختار Cancelled أو Returned) ويفضل مخزّن لباقي الجلسة.</li>
+            <li><code>orderNeedsReason(id)</code> — (v4.1.0) بيرجّع true بس لو الحالة المستهدفة Cancelled/Returned <strong>و</strong> الأوردر ده تحديدًا هيتحل S1 (<code>clientResolveSpecifier()</code> على حالته الحالية). المصدر الوحيد اللي بيقرر إظهار/إلزام السبب لكل صف — مستخدم في <code>renderOrders()</code> / <code>updateActionState()</code> / <code>startUpdate()</code>.</li>
             <li><code>summaryState</code> — <code>{ printableIds, courier, targetLabel }</code> لآخر دفعة — بيغذّي زرار الطباعة في نافذة الملخص</li>
             <li><code>LS_URL = 'order_status_worker_url'</code></li>
             <li><code>LS_SECRET = 'order_status_worker_secret'</code></li>
@@ -1116,6 +1152,8 @@ body {
             <li>تاج Flow/مباشر (writeMode) اتشال من عرض السجل — لسه موجود جوّه <code>extra</code> في D1 وفي XLSX export لو احتاج تحليل تاريخي.</li>
             <li><strong>v3.7.0 — عمود "النتيجة" مش قابل للترتيب عمداً:</strong> النتيجة بتختلف من صف لصف جوه نفس الـ batch الواحد، وترتيب الجدول بيها هيكسر افتراض تجميع الصفوف بالـ <code>batchId</code> اللي <code>renderLog()</code> مبني عليه. باقي الأعمدة (تاريخ/حالة/مندوب/موظف) آمنة لأنها ثابتة على مستوى الصف.</li>
             <li><strong>v3.7.0 — خط واحد + Tier حاوية واحد:</strong> IBM Plex Mono اتشال، <code>--font-mono</code> لسه موجود كمتغيّر CSS بس بقيمة <code>--font-body</code> نفسها (توافق مع الكلاسات القديمة بس). <code>--container-max</code> بقى 1200px (Tier M) بدل 1040px لأن تاب السجل بقى جدول حقيقي وفق معيار القسم الموحّد.</li>
+            <li><strong>v4.0.0 — سبب الإلغاء/الإرجاع:</strong> العمود بيظهر لما الحالة المستهدفة <code>Cancelled</code> أو <code>Returned</code> (<code>needsReasonFor()</code>). القيم مسحوبة حصريًا من قوائم الاختيار المعرّفة في الميتافيلدز (<code>reason_values</code>) — الأداة ما بتخترعش أو بتحفظش قيم قديمة. الـ Worker مايتحققش بنفسه من إن القيمة ضمن الـ choices؛ شوبيفاي نفسها بترفض القيمة الخارجة عن القائمة على مستوى <code>metafieldsSet</code> (تعريف الميتافيلد Choice list)، وده بيسقط الأوردر بس مش الدفعة كلها. لو قائمة الاختيارات فاضية (تعريف الميتافيلد من غير choices) الأداة هتفضل معطّلة لهذه الحالة لحد ما تتضاف اختيارات — نفس سلوك <code>courier_values</code> بالظبط.</li>
+            <li><strong>v4.1.0 — السبب إلزامي بس لـ S1:</strong> ضمن العمود اللي v4.0.0 عرّفه، الإلزام والكتابة الفعلية بقيا محصورين في الأوردرات اللي <code>orderNeedsReason(id)</code> بترجع لها true — يعني <code>specifier</code> المتحل (<code>clientResolveSpecifier()</code> في الواجهة، <code>resolveSpecifier()</code> في الـ Worker) بيساوي <code>Cancelled</code> أو <code>Returned</code>. أوردر <code>Returned</code> بيتحل <code>Returned_S2</code> (يعني كان أصلاً في مسار استرجاع/استبدال S2 — S2 عنده قيمة) بيوري خانة "مش مطلوب" في الجدول، مايتمنعش زرار "تحديث الكل" بسببه، ومايتكتبش عليه أي سبب على شوبيفاي حتى لو كان فيه قيمة قديمة متسجّلة في <code>orderReasons</code> (الـ Worker بيصفّرها في الصف — <code>row.reason = null</code> — لو الـ specifier المتحل مش S1). القرار ده بيتاخد بعد ما نجيب حالة الأوردر الفعلية من شوبيفاي، مش من نية الموظف وقت اختيار الحالة المستهدفة.</li>
             <li>currentEmployee lives in JS memory only. Refresh = re-login, by design.</li>
             <li>Cairo is UTC+3. Egypt DST ends 29-10-2026 → both toCairo() here and CAIRO_OFFSET_HOURS in the Worker must change to +2 on that date.</li>
           </ul>
@@ -1138,7 +1176,7 @@ body {
     <button class="login-settings-btn missing" id="loginSettingsBtn" onclick="openSettings()">
       ⚙️ الإعدادات
     </button>
-    <span class="login-version-tag" id="loginVersionText">v3.7.0</span>
+    <span class="login-version-tag" id="loginVersionText">v4.1.0</span>
 
     <div class="login-top">
       <div class="login-icon">📦</div>
@@ -1621,7 +1659,7 @@ function orderLink(orderNumber, orderId) {
 // سجل التحديثات + نص شاشة الدخول) وبيتزامنوا يدويًا. دلوقتي المصدر واحد
 // و renderVersionUI() بتملاهم كلهم.
 // ⚠️ لازم يساوي VERSION في الـ Worker — الملفين بيترفعوا مع بعض.
-const TOOL_VERSION = '3.7.0';
+const TOOL_VERSION = '4.1.0';
 
 function renderVersionUI() {
   const v = `v${TOOL_VERSION}`;
@@ -2100,6 +2138,7 @@ async function doLogout() {
   orders = []; lastBatch = null; isUpdating = false;
   currentTargetLabel = ''; currentCourier = ''; step1Open = true;
   courierConfirmed = false; courierConfirmedOrderSnapshot = ''; courierPickerForced = false; lastCourierAlertKey = '';
+  orderReasons = {};   // v4.0.0
   Object.keys(orderInfo).forEach(k => delete orderInfo[k]);
   renderStep1Body();
   document.getElementById('wizStep2').classList.add('wiz-locked');
@@ -2187,6 +2226,8 @@ let isUpdating = false;
 let courierListCache = null;
 let ordersCollapsed = true; // §TOOL::ordersTable — auto-managed by applyAutoCollapseRule() (unless overridden)
 let ordersManualOverride = false; // بند 1، v3.2.0 — true بمجرد ما المستخدم يضغط زرار الطي يدوياً
+let orderReasons = {};        // orderId → سبب الإلغاء/الإرجاع المختار (v4.0.0) — سارٍ بس لما needsReasonFor() صح
+let reasonValuesCache = null; // { cancelReasons:[...], returnReasons:[...] } من reason_values (v4.0.0)، lazy-loaded
 function snapshotOrders() { return orders.slice().sort().join(','); }
 
 // ─── §TOOL-JS::resolution (mirrors Worker resolveSpecifier + isTransitionValid) ───
@@ -2217,6 +2258,61 @@ function orderIsBlocked(id) {
 function statusPill(v) {
   if (!v) return '<span class="pill-empty">—</span>';
   return `<span class="pill ${STATUS_PILL[v] || 'p-mute'}">${v}</span>`;
+}
+
+// ─── §TOOL-JS::orderReasons (v4.0.0 — سبب الإلغاء/الإرجاع، إلزامي) ───
+// عمود إضافي في جدول الأوردرات يظهر بس لما الحالة المستهدفة Cancelled أو
+// Returned. القيم مسحوبة من قوائم الاختيار المعرّفة فعلياً في الميتافيلدز —
+// مفيش قيمة مخترعة أو محفوظة من جلسة قديمة.
+function needsReasonFor(label) { return label === 'Cancelled' || label === 'Returned'; }
+
+// ─── v4.1.0 — السبب إلزامي بس للأوردر اللي فعليًا هيتحل لـ S1 ───
+// "Returned" ممكن تتحل S1 (Returned) أو S2 (Returned_S2) حسب حالة الأوردر —
+// السبب مطلوب في S1 بس. بيستخدم نفس clientResolveSpecifier() اللي بيرسم
+// عمود "المسار" (S1/S2) في الجدول، فمفيش منطق تاني منفصل ممكن يتعارض معاه.
+function orderNeedsReason(id) {
+  if (!needsReasonFor(currentTargetLabel)) return false;
+  const info = orderInfo[id] || {};
+  const spec = clientResolveSpecifier(currentTargetLabel, info.s1, info.s2);
+  return spec === 'Cancelled' || spec === 'Returned';
+}
+
+function currentReasonChoices() {
+  if (currentTargetLabel === 'Cancelled') return reasonValuesCache?.cancelReasons || [];
+  if (currentTargetLabel === 'Returned')  return reasonValuesCache?.returnReasons  || [];
+  return [];
+}
+
+async function ensureReasonValues() {
+  if (reasonValuesCache) return reasonValuesCache;
+  try {
+    const data = await apiGet('reason_values');
+    reasonValuesCache = { cancelReasons: data.cancelReasons || [], returnReasons: data.returnReasons || [] };
+  } catch (e) {
+    reasonValuesCache = { cancelReasons: [], returnReasons: [] };
+    showToast(`تعذّر تحميل قائمة أسباب الإلغاء/الإرجاع: ${e.message}`, 'error');
+  }
+  return reasonValuesCache;
+}
+
+function escAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function reasonSelectHTML(id, choices) {
+  const current = orderReasons[id] || '';
+  const missing = !current;
+  const loading = reasonValuesCache === null;
+  const placeholder = loading ? '⏳ جاري تحميل الأسباب...' : '— اختر السبب —';
+  const opts = [`<option value="">${placeholder}</option>`]
+    .concat(choices.map(c => `<option value="${escAttr(c)}" ${c === current ? 'selected' : ''}>${escAttr(c)}</option>`));
+  return `<select class="reason-select ${missing ? 'reason-missing' : ''}" ${loading ? 'disabled' : ''} onchange="setOrderReason('${id}', this.value)">${opts.join('')}</select>`;
+}
+
+function setOrderReason(id, value) {
+  if (value) orderReasons[id] = value; else delete orderReasons[id];
+  updateActionState();
+  renderOrders();
 }
 
 // ─── §TOOL-JS::tabs ───
@@ -2280,6 +2376,7 @@ function selectTargetLabel(label) {
   courierConfirmedOrderSnapshot = '';
   courierPickerForced = false;
   lastCourierAlertKey = '';
+  orderReasons = {};   // v4.0.0 — تصفير الأسباب المختارة عند تغيير الحالة المستهدفة
 
   renderStep1Body();
 
@@ -2291,6 +2388,12 @@ function selectTargetLabel(label) {
   renderOrders();
   updateActionState();
   focusScan();
+
+  // v4.0.0 — تحميل قوائم أسباب الإلغاء/الإرجاع مقدّمًا (lazy، مرة واحدة لكل
+  // جلسة) لو الحالة المختارة محتاجاها؛ الجدول بيتعاد رسمه بمجرد ما توصل.
+  if (needsReasonFor(label)) {
+    ensureReasonValues().then(() => { if (currentTargetLabel === label) renderOrders(); });
+  }
 }
 
 // ─── §TOOL-JS::reopenStep1 (بند 1/2 — "تغيير الحالة": يرجع لشبكة الاختيار) ───
@@ -2562,7 +2665,10 @@ function statusColorClass(label) { return TARGET_LABELS[label]?.color || ''; }
 
 function updateActionState() {
   const cfg = TARGET_LABELS[currentTargetLabel];
-  const ok  = !!cfg && orders.length > 0 && (!cfg.needsCourier || (courierConfirmed && !!currentCourier)) && !isUpdating;
+  // v4.1.0 — سبب الإلغاء/الإرجاع إلزامي بس للأوردرات اللي هتتحل فعليًا لـ S1
+  // (orderNeedsReason يرجع false تلقائيًا للحالات التانية ولأوردرات S2)
+  const allReasonsSet = orders.every(id => !orderNeedsReason(id) || !!orderReasons[id]);
+  const ok  = !!cfg && orders.length > 0 && (!cfg.needsCourier || (courierConfirmed && !!currentCourier)) && allReasonsSet && !isUpdating;
 
   document.getElementById('updateBtn').disabled = !ok;
   document.getElementById('updateBtn').className = cfg ? `btn-update ${cfg.color}` : 'btn-update';
@@ -2673,6 +2779,7 @@ function addOrders(ids) {
 // applyAutoCollapseRule() بترجع تتأكد بس من غياب أوردرات خطأ لو مفيش override يدوي.
 function removeOrder(id) {
   orders = orders.filter(o => o !== id);
+  delete orderReasons[id];   // v4.0.0
   renderOrders();
   renderCourierStep();
   applyAutoCollapseRule();
@@ -2683,6 +2790,7 @@ function clearOrders() {
   if (!orders.length) return;
   showConfirm(`مسح كل الأوردرات (${orders.length.toLocaleString('en-US')}) من القائمة؟`, () => {
     orders = [];
+    orderReasons = {};   // v4.0.0
     renderOrders();
     renderCourierStep();
     ordersCollapsed = true;
@@ -2747,6 +2855,9 @@ function renderOrders(flashFirst = false) {
     return;
   }
 
+  const showReason     = needsReasonFor(currentTargetLabel);        // v4.0.0
+  const reasonChoices  = showReason ? currentReasonChoices() : [];
+
   const rows = orders.map((id, i) => {
     const info  = orderInfo[id] || {};
     const known = info.s1 !== undefined;
@@ -2767,6 +2878,16 @@ function renderOrders(flashFirst = false) {
       ? `<span class="pill ${spec.endsWith('_S2') ? 'p-amber' : 'p-accent'}">${spec.endsWith('_S2') ? 'S2' : 'S1'}</span>`
       : '<span class="pill-empty">—</span>';
     const courierBadge = info.courier ? `<span class="pill p-purple">🛵 ${info.courier}</span>` : '<span class="pill-empty">—</span>';
+    // v4.1.0 — العمود بيظهر لكل صفوف الجدول لما الحالة المستهدفة Cancelled/Returned
+    // (showReason)، بس السبب إلزامي/بيتعرض بس للصفوف اللي فعليًا هتتحل S1
+    // (rowNeedsReason — نفس spec المحسوب فوق، مفيش نداء تاني). صف S2 بيوري
+    // خانة "مش مطلوب" بدل الـ <select>.
+    const rowNeedsReason = spec === 'Cancelled' || spec === 'Returned';
+    const reasonCell = showReason
+      ? (rowNeedsReason
+          ? `<td onclick="event.stopPropagation()">${reasonSelectHTML(id, reasonChoices)}</td>`
+          : `<td class="reason-na">— (S2، غير مطلوب) —</td>`)
+      : '';
 
     return `<tr class="${cls}">
       <td class="c-del"><button class="del-x" onclick="removeOrder('${id}')">✕</button></td>
@@ -2776,6 +2897,7 @@ function renderOrders(flashFirst = false) {
       <td>${statusPill(info.s2)}</td>
       <td>${pathTag}</td>
       <td>${courierBadge}</td>
+      ${reasonCell}
     </tr>`;
   }).join('');
 
@@ -2785,6 +2907,7 @@ function renderOrders(flashFirst = false) {
       <th>رقم الأوردر</th>
       <th>S1 الحالية</th><th>S2 الحالية</th>
       <th>المسار</th><th>المندوب</th>
+      ${showReason ? '<th>سبب الإلغاء/الإرجاع</th>' : ''}
     </tr></thead><tbody>${rows}</tbody></table>`;
 
   renderOrdersCollapseUI();
@@ -2813,6 +2936,16 @@ function startUpdate() {
     return;
   }
 
+  // v4.1.0 — سبب الإلغاء/الإرجاع إلزامي بس للأوردرات اللي هتتحل فعليًا لـ S1
+  // (Cancelled/Returned) — أوردرات Returned اللي هتتحل S2 مستثناة (orderNeedsReason)
+  // (بعد فحص الأوردرات المحظورة — عشان الرسالة تبقى عن الأوردرات اللي هتتحدّث فعلاً)
+  const missingReason = orders.filter(id => orderNeedsReason(id) && !orderReasons[id]);
+  if (missingReason.length) {
+    showToast(`⚠️ اختر سبب الإلغاء/الإرجاع لـ ${missingReason.length.toLocaleString('en-US')} أوردر أولاً`, 'error', 4000);
+    playBeep('warn');
+    return;
+  }
+
   const msg = `تحديث ${orders.length.toLocaleString('en-US')} أوردر إلى "${currentTargetLabel}"؟` +
               (cfg.needsCourier ? `\nالمندوب: ${currentCourier}` : '');
   showConfirm(msg, doStartUpdate);
@@ -2821,6 +2954,7 @@ function startUpdate() {
 async function doStartUpdate() {
   isUpdating = true;
   const cfg = TARGET_LABELS[currentTargetLabel];
+  const needsReason = needsReasonFor(currentTargetLabel);   // v4.0.0
   const btn = document.getElementById('updateBtn');
   btn.disabled = true; btn.textContent = '⏳ جاري التحديث...';
   document.getElementById('progWrap').classList.add('on');
@@ -2839,12 +2973,18 @@ async function doStartUpdate() {
   for (let i = 0; i < orders.length; i += UPDATE_CHUNK) {
     const chunk = orders.slice(i, i + UPDATE_CHUNK);
     try {
-      const data = await apiPost('update_status', {
+      const body = {
         orderIds:    chunk,
         targetLabel: currentTargetLabel,
         courier:     cfg.needsCourier ? courierToSend : '',
         employee:    currentEmployee?.username || '',
-      });
+      };
+      // سبب الإلغاء/الإرجاع لكل أوردر في الدفعة الحالية — needsReason هنا على
+      // مستوى targetLabel بس (زي الـ Worker). أوردرات Returned اللي هتتحل S2
+      // مالهاش select في الجدول أصلاً (v4.1.0)، فـ orderReasons[id] فاضي طبيعي
+      // وبيتبعت '' — الـ Worker مش هيطلبه أو يكتبه لأوردرات S2.
+      if (needsReason) body.reasons = Object.fromEntries(chunk.map(id => [id, orderReasons[id] || '']));
+      const data = await apiPost('update_status', body);
       batchId = batchId || data.batchId;
       for (const r of (data.results || [])) {
         // §TOOL-JS::٣-حالات (v3.5.0، راجع html-builder Step 3C) — الحالة جاية
@@ -2877,6 +3017,7 @@ async function doStartUpdate() {
   if (succeeded.length) {
     const doneSet = new Set(succeeded);
     orders = orders.filter(id => !doneSet.has(id));
+    doneSet.forEach(id => delete orderReasons[id]);   // v4.0.0 — تنضيف الأسباب المستخدمة
     renderOrders();
     renderCourierStep();
     ordersCollapsed = true;
@@ -2975,6 +3116,7 @@ function summaryOpenLog() {
 function summaryStartFresh() {
   closeUpdateSummary();
   orders = [];
+  orderReasons = {};   // v4.0.0
   Object.keys(orderInfo).forEach(k => delete orderInfo[k]);
   currentTargetLabel = '';
   currentCourier = '';
