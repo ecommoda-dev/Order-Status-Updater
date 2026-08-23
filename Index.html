@@ -426,9 +426,16 @@ body {
 .res-badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; flex-shrink: 0; }
 .res-badge.wait { background: var(--accent-light); color: var(--accent); }
 .res-badge.ok   { background: var(--green-light);  color: var(--green); }
+.res-badge.warn { background: var(--amber-light);  color: var(--amber); }
 .res-badge.err  { background: var(--red-light);    color: var(--red); }
-.log-ok  { color: var(--green); font-weight: 700; }
-.log-err { color: var(--red);   font-weight: 700; }
+.log-ok   { color: var(--green); font-weight: 700; }
+.log-warn { color: var(--amber); font-weight: 700; }
+.log-err  { color: var(--red);   font-weight: 700; }
+/* §TOOL::resultReason — سطر السبب/الأكشنز تحت كل res-item مش ناجح بالكامل (v3.5.0) */
+.res-item { flex-wrap: wrap; }
+.res-reason { flex-basis: 100%; font-size: 11px; color: var(--text-secondary); line-height: 1.6; padding-inline-start: 2px; }
+.res-reason.warn { color: var(--amber); }
+.res-reason.err  { color: var(--red); }
 
 /* Orders table — collapsible wrapper (§TOOL::ordersTable) */
 .ord-toggle-row { cursor: pointer; user-select: none; transition: background .12s; }
@@ -661,7 +668,7 @@ body {
   <div class="app-header-btns">
     <button class="hbtn active-user" id="activeUserBtn" onclick="doLogout()">👤 —</button>
     <button class="hbtn" onclick="openAbout()">ℹ️ عن الأداة</button>
-    <button class="hbtn ver-btn" onclick="openChangelog()">v3.4.2 📋</button>
+    <button class="hbtn ver-btn" onclick="openChangelog()">v3.5.0 📋</button>
     <button class="hbtn" id="settingsBtn" onclick="openSettings()">⚙️ الإعدادات</button>
   </div>
 </div>
@@ -685,6 +692,11 @@ body {
       <div class="settings-field">
         <label class="settings-label">ADMIN WORKER URL</label>
         <input type="text" class="settings-input" id="cfgAdminUrl" />
+      </div>
+      <div class="settings-field" style="border-top:1.5px solid var(--border-light);padding-top:12px;">
+        <label class="settings-label">فحص النظام</label>
+        <button class="btn-sm" id="diagBtn" onclick="runDiag()">🩺 افحص الأداة والاتصالات</button>
+        <div id="diagResult" style="margin-top:10px;font-size:12px;line-height:1.7;"></div>
       </div>
     </div>
     <div class="settings-modal-ftr">
@@ -720,7 +732,21 @@ body {
 
       <div class="cl-version-block">
         <div class="cl-version-row">
-          <span class="cl-ver-badge">v3.4.2</span>
+          <span class="cl-ver-badge">v3.5.0</span>
+          <span class="cl-ver-date">23-08-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>فلتر جديد "النتيجة" (✓ نجح / ⚠ تحذير / ✗ فشل) في فلاتر تاب سجل العمليات — اختيار متعدد زي فلاتر الحالة/المندوب/الموظف بالظبط، متطلب Worker v3.3.0+.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>نتيجة أي عملية تحديث بقت 3 حالات مش 2: <strong>✓ تم</strong> (اتنفذ واتأكد) · <strong>⚠ تم جزئيًا</strong> (الفعل الأساسي تم بس فيه حاجة ما اتأكدتش — زي إلغاء أوردر لسه ما اتأكدش، أو مرتجع كان مسترجَع قبل كده) · <strong>✗ فشل</strong>. القسم النهائي بعد "تحديث الكل" بيعرض عدّاد التحذير + سبب كل تحذير أو فشل كامل تحت البادج، وسطر "ما تم فعليًا" (actions) لأي صف مش ناجح بالكامل.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>عمود "النتيجة" في تفاصيل سجل العمليات وعدّادات صف الدفعة (✓/⚠/✗) بقوا بيعكسوا الحالات التلاتة بدل ✓/✗ بس.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>الـ Worker (v3.3.0) اتزامن مع تقرير تدقيق 23-08-2026: <code>disposeReturns</code> بقت بتحسب الكمية المتبقية الفعلية (مش الكمية الكاملة) فمش بترمي "Invalid disposition quantity" على مرتجع اتسترجع جزء منه قبل كده، <code>actions</code> بقت بتتسجل لحظة ما تحصل فعليًا (مش في الآخر) فمش بتختفي من السجل لو حصل فشل جزئي بعد أفعال حقيقية لا رجعة فيها (إلغاء أوردر)، وتحقق مجمّع بعد الدفعة (<code>verifyCancels</code>) للتأكد من نجاح كل إلغاء فعليًا.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>زرار "🩺 افحص الأداة والاتصالات" في الإعدادات — بينادي <code>?action=diag</code> الجديد في الـ Worker ويعرض حالة D1 وصلاحيات تطبيق شوبيفاي وLOCATION_ID كسطور ✅/❌ بدون عرض أي قيمة سر.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v3.4.2</span>
           <span class="cl-ver-date">18-08-2026</span>
         </div>
         <ul class="cl-items">
@@ -884,7 +910,7 @@ body {
             <tr><td><code>search_courier_orders</code></td><td>أوردرات مندوب مؤهلة لحالة مستهدفة (أو <code>noCourier:true</code> لأوردرات بدون مندوب) — تبحث S1 وS2 مع بعض وتدمج النتائج</td></tr>
             <tr><td><code>update_status</code></td><td>يحسم S1/S2 لكل أوردر تلقائياً + يتحقق + ينفّذ + يسجّل في D1</td></tr>
             <tr><td><code>order_details</code></td><td>اسم العميل والهاتف والعنوان والـ COD للمانفيست</td></tr>
-            <tr><td><code>get_logs</code></td><td>صفحة سجل (100 صف) — يقبل employee/status/courier/search/dateFrom/dateTo (كلهم اختيار متعدد comma-separated ما عدا search/dateFrom/dateTo)</td></tr>
+            <tr><td><code>get_logs</code></td><td>صفحة سجل (100 صف) — يقبل employee/status/courier/result/search/dateFrom/dateTo (كلهم اختيار متعدد comma-separated ما عدا search/dateFrom/dateTo). <code>result</code> بيفلتر على <code>extra.result</code>: success/warning/error</td></tr>
             <tr><td><code>get_logs_count</code></td><td>العدد الكلي المطابق لنفس الفلاتر أعلاه</td></tr>
             <tr><td><code>get_logs_export</code></td><td>تصدير XLSX حتى 2000 صف — نفس الفلاتر أعلاه</td></tr>
           </table>
@@ -922,7 +948,7 @@ body {
             <li><code>الكتابة على Shopify + مسح المندوب عند Ready</code> — Worker §STATUS — <code>applyDirect()</code></li>
             <li><code>طباعة المانفيست (فردي أو مجمّع من السجل)</code> — HTML §TOOL-JS — <code>printManifest()</code> / §LOG-JS — <code>printBatch()</code> / <code>printSelectedBatches()</code></li>
             <li><code>سجل العمليات (جدول أعمدة + تفاصيل قابلة للتوسيع)</code> — HTML §LOG-JS — <code>get_logs</code> / <code>renderLog()</code></li>
-            <li><code>فلاتر السجل (حالة/مندوب/موظف اختيار متعدد + بحث + فترة تاريخ في صف منفصل)</code> — HTML §LOG-JS — <code>msState</code> / <code>fetchLog()</code> — Worker §SHARED — <code>buildLogFilterSQL()</code></li>
+            <li><code>فلاتر السجل (حالة/مندوب/النتيجة/موظف اختيار متعدد + بحث + فترة تاريخ في صف منفصل)</code> — HTML §LOG-JS — <code>msState</code> / <code>fetchLog()</code> — Worker §SHARED — <code>buildLogFilterSQL()</code></li>
             <li><code>تصدير XLSX (الكل أو المحدد)</code> — HTML §LOG-JS — <code>exportLogXLSX()</code> / <code>exportSelectedLogXLSX()</code> / <code>buildAndDownloadWorkbook()</code></li>
             <li><code>D1 log write (صف لكل أوردر)</code> — Worker §HANDLER — <code>writeLog()</code></li>
           </ul>
@@ -944,7 +970,7 @@ body {
             <li><code>orderInfo[id]</code> — يحمل <code>courier</code> بجانب <code>s1</code>/<code>s2</code>/<code>isCancelled</code> (فاضي = بدون مندوب)</li>
             <li><code>ordersCollapsed</code> — حالة طي جدول الأوردرات</li>
             <li><code>ordersManualOverride</code> — true بمجرد ما المستخدم يضغط زرار الطي/الفتح يدوياً؛ طول ما هو true، <code>applyAutoCollapseRule()</code> مبيغيّرش الحالة تلقائي (بيتصفّر عند اختيار حالة جديدة، مسح الكل، تسجيل خروج، أو نجاح تحديث)</li>
-            <li><code>msState</code> — حالة فلاتر الاختيار المتعدد في السجل (<code>logStatus</code>/<code>logCourier</code>/<code>logEmp</code>)</li>
+            <li><code>msState</code> — حالة فلاتر الاختيار المتعدد في السجل (<code>logStatus</code>/<code>logCourier</code>/<code>logResult</code>/<code>logEmp</code>)</li>
             <li><code>selectedLogBatches</code> — Set لمعرّفات batch المحددة (لأي حالة) — يغذّي زراري "تصدير المحدد" و"طباعة المحدد" (الأخير Shipped بس)</li>
           </ul>
 
@@ -957,6 +983,7 @@ body {
             <li>"بدون مندوب" مجموعة عرض فقط لتجميع الأوردرات اللي مفيش عليها مندوب مسجَّل — مينفعش تُختار أبداً كمندوب نهائي للتحديث (بند 3، v3.4.0). صفها في جدول التجميع بيظهر معطّل (خلفية حمراء، مفيش onclick)، ولو كل الأوردرات المضافة بدون مندوب، الأداة بتاخد المستخدم مباشرة لمسار اختيار مندوب حقيقي بدل ما تقترحها كاقتراح جاهز. <code>chooseCourier()</code> برضو بيرفض أي محاولة (برمجية أو غيرها) لتمرير <code>NO_COURIER_LABEL</code> كقيمة نهائية.</li>
             <li>لوج batch واحد ممكن يحتوي دلوقتي على مزيج S1 وS2 (لأن الهدف واحد بس التصنيف بيتحسم لكل أوردر لوحده) — البادج S1/S2 بقى على مستوى كل صف تفصيلي جوه الـ batch مش على مستوى الـ batch كله.</li>
             <li>فلتر "الحالة" في تاب السجل بيقارن على الاتنين extra.targetLabel و extra.specifier (بعد شيل _S2) مع بعض في الـ Worker — عشان الصفوف القديمة اللي مسجَّلة بحقل واحد بس تفضل تظهر في الفلتر برضو.</li>
+            <li>نتيجة العملية (<code>extra.result</code>) بقت 3 قيم: <code>success</code> (تم واتأكد) · <code>warning</code> (الفعل الأساسي تم بس فيه حاجة ما اتأكدتش — زي إلغاء أوردر لسه ما اتأكدش، أو مرتجع كان مسترجَع بالكامل قبل كده) · <code>error</code> (فشل). فلتر "النتيجة" الجديد في تاب السجل بيفلتر على القيمة دي مباشرة.</li>
             <li>خانة التحديد في السجل بقت متاحة لكل العمليات (أي حالة) — زرار "تصدير المحدد" بيشتغل لأي تحديد، أما "طباعة المحدد" فبيظهر بس لو كل العمليات المحددة حالتها Shipped.</li>
             <li>تاج Flow/مباشر (writeMode) اتشال من عرض السجل — لسه موجود جوّه <code>extra</code> في D1 وفي XLSX export لو احتاج تحليل تاريخي.</li>
             <li>currentEmployee lives in JS memory only. Refresh = re-login, by design.</li>
@@ -981,7 +1008,7 @@ body {
     <button class="login-settings-btn missing" id="loginSettingsBtn" onclick="openSettings()">
       ⚙️ الإعدادات
     </button>
-    <span class="login-version-tag">v3.4.2</span>
+    <span class="login-version-tag">v3.5.0</span>
 
     <div class="login-top">
       <div class="login-icon">📦</div>
@@ -1144,6 +1171,7 @@ body {
         <div class="res-hdr">
           <span>النتائج</span>
           <span><span class="log-ok">✓ <span id="resOk">0</span></span> &nbsp;
+                <span class="log-warn">⚠ <span id="resWarn">0</span></span> &nbsp;
                 <span class="log-err">✗ <span id="resErr">0</span></span></span>
         </div>
         <div class="res-list" id="resList"></div>
@@ -1189,7 +1217,30 @@ body {
             </div>
           </div>
 
-          <!-- 2) المندوب — multi-select (مع بحث) -->
+          <!-- 2) النتيجة — multi-select -->
+          <div class="log-fg">
+            <span class="log-flabel">النتيجة</span>
+            <div class="ms-wrap" id="msWrap-logResult">
+              <button class="ms-btn" id="msBtn-logResult" onclick="msToggle('logResult')">
+                <span id="msBtnLabel-logResult">كل النتائج</span>
+                <span class="ms-arrow">▾</span>
+              </button>
+              <div class="ms-menu" id="msMenu-logResult">
+                <div class="ms-selectall-row" onclick="msToggleSelectAll('logResult')">
+                  <input type="checkbox" id="msSelectAll-logResult"
+                    onclick="event.stopPropagation()" onchange="msToggleSelectAll('logResult', this.checked)">
+                  <span id="msSelectAllLabel-logResult">تحديد الكل</span>
+                </div>
+                <div class="ms-list" id="msList-logResult"></div>
+                <div class="ms-ftr">
+                  <button class="ms-ftr-clear" onclick="msClear('logResult')">مسح الاختيار</button>
+                  <span class="ms-ftr-count" id="msFtrCount-logResult"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3) المندوب — multi-select (مع بحث) -->
           <div class="log-fg">
             <span class="log-flabel">المندوب</span>
             <div class="ms-wrap" id="msWrap-logCourier">
@@ -1216,13 +1267,13 @@ body {
             </div>
           </div>
 
-          <!-- 3) بحث برقم الأوردر -->
+          <!-- 4) بحث برقم الأوردر -->
           <div class="log-fg">
             <label class="log-flabel">بحث برقم الأوردر</label>
             <input type="text" class="log-finput w-search" id="logSearch" placeholder="مثال: 37269" autocomplete="off" spellcheck="false" oninput="toggleSearchActiveState(this)" />
           </div>
 
-          <!-- 4) الموظف — multi-select -->
+          <!-- 5) الموظف — multi-select -->
           <div class="log-fg">
             <span class="log-flabel">الموظف</span>
             <div class="ms-wrap" id="msWrap-logEmp">
@@ -1294,6 +1345,7 @@ body {
 
         <!-- Chips — سطر منفصل لكل فلتر -->
         <div class="ms-chips-row" id="chipsRow-logStatus"></div>
+        <div class="ms-chips-row" id="chipsRow-logResult"></div>
         <div class="ms-chips-row" id="chipsRow-logCourier"></div>
         <div class="ms-chips-row" id="chipsRow-logEmp"></div>
       </div>
@@ -1448,6 +1500,33 @@ function updateSettingsBtn() {
 function updateSettingsButtonsState() {
   updateSettingsBtn();
   updateLoginSettingsBtnState();
+}
+
+// ─── §SETTINGS-JS::runDiag — يستدعي ?action=diag ويعرض كل فحص كسطر (لا يعرض قيمة أي سر) ───
+async function runDiag() {
+  const box = document.getElementById('diagResult');
+  const btn = document.getElementById('diagBtn');
+  box.innerHTML = '⏳ جارِ الفحص...';
+  btn.disabled = true;
+  try {
+    const d = await apiGet('diag');
+    const line = (ok, label, detail) => `<div>${ok ? '✅' : '❌'} ${label}${detail ? ' — ' + detail : ''}</div>`;
+    let html = '';
+    html += line(d.d1?.ok, 'D1 (قاعدة السجلات)', d.d1?.error || '');
+    html += line(d.shopifyAuth?.ok, 'اتصال شوبيفاي + صلاحيات التطبيق', d.shopifyAuth?.ok ? (d.shopifyAuth.scopes || []).join(', ') : (d.shopifyAuth?.error || ''));
+    if (d.locationCheck?.present) {
+      html += line(d.locationCheck.resolvesOk, 'LOCATION_ID بيتحل لموقع حقيقي', d.locationCheck.resolvesOk ? d.locationCheck.name : (d.locationCheck.error || ''));
+    } else {
+      html += line(false, 'LOCATION_ID', 'غير معرَّف');
+    }
+    html += `<div style="margin-top:6px;color:var(--text-sub)">نسخة الـ Worker: <b>${d.version || '—'}</b> · Origin: ${d.origin || '—'}</div>`;
+    html += `<div style="margin-top:4px;font-weight:700;color:${d.allOk ? 'var(--green)' : 'var(--red)'}">${d.allOk ? '✓ كل الفحوصات سليمة' : '✗ في مشكلة محتاجة مراجعة'}</div>`;
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = `<div style="color:var(--red)">✗ فشل الفحص: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function openChangelog()             { document.getElementById('changelogOverlay').classList.add('open'); }
@@ -2582,9 +2661,10 @@ async function doStartUpdate() {
        <span class="res-badge wait">⏳</span>
      </div>`).join('');
 
-  let okCount = 0, errCount = 0, done = 0;
+  let okCount = 0, warnCount = 0, errCount = 0, done = 0;
   const succeeded = [];
   let batchId = null;
+  let anyUnlogged = false;
 
   // §TOOL-JS::update — بند 3، v3.4.0: currentCourier مينفعش يكون NO_COURIER_LABEL
   // خالص هنا (chooseCourier/startUpdate بيرفضوه قبل الوصول للنقطة دي) — الحارس
@@ -2602,16 +2682,31 @@ async function doStartUpdate() {
       });
       batchId = batchId || data.batchId;
       for (const r of (data.results || [])) {
-        if (r.status === 'success') { okCount++; succeeded.push(r.orderId); markResult(r.orderId, 'ok', '✓'); }
-        else                        { errCount++; markResult(r.orderId, 'err', '✗', r.error); }
+        // §TOOL-JS::٣-حالات (v3.5.0، راجع html-builder Step 3C) — الحالة جاية
+        // من السيرفر كما هي، مش مشتقة من success ? … : … بس.
+        if (r.status === 'success') {
+          okCount++; succeeded.push(r.orderId);
+          markResult(r.orderId, 'ok', '✓');
+        } else if (r.status === 'warning') {
+          warnCount++; succeeded.push(r.orderId);
+          const reason = [...(r.warnings || [])].join(' | ') || 'تحذير غير محدد';
+          const actionsLine = r.actions?.length ? ` — تم فعليًا: ${r.actions.join('، ')}` : '';
+          markResult(r.orderId, 'warn', '⚠', reason + actionsLine, 'warn');
+        } else {
+          errCount++;
+          const actionsLine = r.actions?.length ? ` (تم فعليًا: ${r.actions.join('، ')})` : '';
+          markResult(r.orderId, 'err', '✗', `${r.error || 'خطأ غير معروف'}${actionsLine}`, 'err');
+        }
+        if (r.logged === false) anyUnlogged = true;
       }
     } catch (e) {
-      chunk.forEach(id => { errCount++; markResult(id, 'err', '✗', e.message); });
+      chunk.forEach(id => { errCount++; markResult(id, 'err', '✗', e.message, 'err'); });
     }
     done += chunk.length;
     document.getElementById('progBar').style.width = `${(done / orders.length) * 100}%`;
-    document.getElementById('resOk').textContent  = okCount.toLocaleString('en-US');
-    document.getElementById('resErr').textContent = errCount.toLocaleString('en-US');
+    document.getElementById('resOk').textContent   = okCount.toLocaleString('en-US');
+    document.getElementById('resWarn').textContent = warnCount.toLocaleString('en-US');
+    document.getElementById('resErr').textContent  = errCount.toLocaleString('en-US');
   }
 
   lastBatch = { batchId, targetLabel: currentTargetLabel, courier: currentCourier, orderIds: succeeded };
@@ -2620,7 +2715,11 @@ async function doStartUpdate() {
   isUpdating = false;
   btn.textContent = '🚀 تحديث الكل';
 
-  if (errCount === 0) {
+  if (anyUnlogged) {
+    showToast('⚠️ بعض العمليات تمّت لكن ما اتسجّلتش في السجل — راجع D1', 'error', 6000);
+  }
+
+  if (errCount === 0 && warnCount === 0) {
     showToast(`✅ تم تحديث ${okCount.toLocaleString('en-US')} أوردر بنجاح`, 'success');
     playBeep('success');
     if (currentTargetLabel === 'Shipped' && succeeded.length) {
@@ -2633,15 +2732,28 @@ async function doStartUpdate() {
     ordersCollapsed = true;
     ordersManualOverride = false;
     renderOrdersCollapseUI();
+  } else if (errCount === 0) {
+    showToast(`تم: ${okCount.toLocaleString('en-US')} ناجح · ${warnCount.toLocaleString('en-US')} محتاج مراجعة ⚠`, 'error', 6000);
+    playBeep('warn');
+    orders = [];
+    renderOrders();
+    renderCourierStep();
+    ordersCollapsed = true;
+    ordersManualOverride = false;
+    renderOrdersCollapseUI();
   } else {
-    showToast(`تم: ${okCount} ناجح · ${errCount} فشل`, 'error', 5000);
+    showToast(`تم: ${okCount} ناجح · ${warnCount} تحذير · ${errCount} فشل`, 'error', 5000);
     playBeep('error');
   }
   updateActionState();
 }
 
-function markResult(id, cls, txt, title = '') {
-  const el = document.querySelector(`[data-res="${id}"] .res-badge`);
+// markResult — v3.5.0: بقت بتاخد سطر سبب/تحذير كامل تحت البادج (Step 3C) —
+// مفيش اختصار للسبب في title بس زي قبل كده.
+function markResult(id, cls, txt, reasonText = '', reasonCls = '') {
+  const item = document.querySelector(`[data-res="${id}"]`);
+  if (!item) return;
+  const el = item.querySelector('.res-badge');
   if (!el) return;
   el.className = `res-badge ${cls}`;
   el.textContent = txt;
@@ -2863,9 +2975,10 @@ function clearLogFilters() {
   document.getElementById('logSearch').value = '';
   toggleSearchActiveState(document.getElementById('logSearch'));
   msState.logStatus.selected.clear();
+  msState.logResult.selected.clear();
   msState.logCourier.selected.clear();
   msState.logEmp.selected.clear();
-  msRenderList('logStatus'); msRenderList('logCourier'); msRenderList('logEmp');
+  msRenderList('logStatus'); msRenderList('logResult'); msRenderList('logCourier'); msRenderList('logEmp');
   renderChips();
   document.getElementById('rangeDateFrom').value = '';
   document.getElementById('rangeDateTo').value   = '';
@@ -2881,6 +2994,7 @@ function clearLogFilters() {
 // راجع references/multi-select-filter.md — كومبوننت موحّد بمفتاح key
 const msState = {
   logStatus:  { items: [], selected: new Set(), search: '' },
+  logResult:  { items: [], selected: new Set(), search: '' },
   logCourier: { items: [], selected: new Set(), search: '' },
   logEmp:     { items: [], selected: new Set(), search: '' },
 };
@@ -2912,7 +3026,7 @@ function msRenderList(key) {
   document.getElementById(`msFtrCount-${key}`).textContent = `${st.selected.size} مختار`;
 }
 
-const MS_DEFAULT_LABEL = { logStatus: 'كل الحالات', logCourier: 'كل المناديب', logEmp: 'كل الموظفين' };
+const MS_DEFAULT_LABEL = { logStatus: 'كل الحالات', logResult: 'كل النتائج', logCourier: 'كل المناديب', logEmp: 'كل الموظفين' };
 function msUpdateButtonLabel(key) {
   const st = msState[key];
   const btn = document.getElementById(`msBtn-${key}`);
@@ -2984,6 +3098,16 @@ function onMsFilterChanged() { logCurrentPage = 1; fetchLog(); }
 function initLogStatusFilter() {
   msState.logStatus.items = Object.entries(TARGET_LABELS).map(([label, s]) => ({ value: label, label: `${s.icon} ${label}` }));
   msRenderList('logStatus');
+}
+
+// result list is static (3-state model) — populate once
+function initLogResultFilter() {
+  msState.logResult.items = [
+    { value: 'success', label: '✓ نجح' },
+    { value: 'warning', label: '⚠ تحذير' },
+    { value: 'error',   label: '✗ فشل' },
+  ];
+  msRenderList('logResult');
 }
 
 async function loadLogCourierFilter() {
@@ -3078,6 +3202,7 @@ function onRangeDateChange() {
 function buildLogParams() {
   const params = {};
   if (msState.logStatus.selected.size)  params.status    = [...msState.logStatus.selected].join(',');
+  if (msState.logResult.selected.size)  params.result    = [...msState.logResult.selected].join(',');
   if (msState.logCourier.selected.size) params.courier   = [...msState.logCourier.selected].join(',');
   if (msState.logEmp.selected.size)     params.employee  = [...msState.logEmp.selected].join(',');
   const search = document.getElementById('logSearch').value.trim();
@@ -3175,18 +3300,21 @@ function renderLog(entries) {
   [...selectedLogBatches].forEach(k => { if (!knownKeys.has(k)) selectedLogBatches.delete(k); });
 
   const rowsHtml = groups.map((g, gi) => {
-    const ok  = g.rows.filter(r => r.extra.result === 'success').length;
-    const err = g.rows.length - ok;
+    const ok   = g.rows.filter(r => r.extra.result === 'success').length;
+    const warn = g.rows.filter(r => r.extra.result === 'warning').length;
+    const err  = g.rows.length - ok - warn;
     const canPrint = g.targetLabel === 'Shipped' && ok > 0;
     const checked = selectedLogBatches.has(g.key);
 
     const detailRows = g.rows.map(r => {
-      const good = r.extra.result === 'success';
+      const res = r.extra.result;
+      const resCls  = res === 'success' ? 'log-ok' : res === 'warning' ? 'log-warn' : res === 'error' ? 'log-err' : '';
+      const resText = res === 'success' ? '✓ نجح'  : res === 'warning' ? '⚠ تحذير' : res === 'error' ? '✗ فشل'  : '—';
       const fieldTag = r.extra.field ? `<span class="log-tag ${r.extra.field === 'S2' ? 's2' : 's1'}">${r.extra.field}</span>` : '—';
       return `<tr>
         <td>${orderLink(r.entry.order_name || r.entry.order_id, r.entry.order_id)}</td>
         <td>${fieldTag}</td>
-        <td class="${good ? 'log-ok' : 'log-err'}">${good ? '✓ نجح' : '✗ فشل'}</td>
+        <td class="${resCls}">${resText}</td>
         <td>${r.entry.notes || '—'}</td>
       </tr>`;
     }).join('');
@@ -3201,12 +3329,13 @@ function renderLog(entries) {
       <td>${g.courier ? `<span class="log-tag cr">🛵 ${g.courier}</span>` : '—'}</td>
       <td>${g.employee ? `<span class="log-tag emp">👤 ${g.employee.replace(/_/g, ' ')}</span>` : '—'}</td>
       <td class="log-ok">✓${ok}</td>
+      <td>${warn ? `<span class="log-warn">⚠${warn}</span>` : '—'}</td>
       <td>${err ? `<span class="log-err">✗${err}</span>` : '—'}</td>
       <td onclick="event.stopPropagation()">${canPrint ? `<button class="btn-sm" style="font-size:11px;padding:3px 9px" onclick="printBatch(${gi})">🖨️ طباعة</button>` : '—'}</td>
       <td><span class="lb-arrow" id="lba-${gi}">▶</span></td>
     </tr>
     <tr class="log-detail-row" id="lbd-${gi}" style="display:none">
-      <td colspan="9">
+      <td colspan="10">
         <div class="log-detail-inner">
           <table class="log-detail-tbl">
             <thead><tr><th>رقم الأوردر</th><th>النوع</th><th>النتيجة</th><th>ملحوظات</th></tr></thead>
@@ -3221,7 +3350,7 @@ function renderLog(entries) {
     <thead><tr>
       <th style="width:32px"></th>
       <th>التاريخ</th><th>الحالة</th><th>المندوب</th><th>الموظف</th>
-      <th>✓</th><th>✗</th><th>طباعة</th><th></th>
+      <th>✓</th><th>⚠</th><th>✗</th><th>طباعة</th><th></th>
     </tr></thead>
     <tbody>${rowsHtml}</tbody>
   </table>`;
@@ -3291,6 +3420,7 @@ async function loadEmployeeFilter() {
     msRenderList('logEmp');
   } catch { /* filter stays empty on failure */ }
   initLogStatusFilter();
+  initLogResultFilter();
   loadLogCourierFilter();
 }
 
