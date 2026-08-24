@@ -3224,8 +3224,8 @@ function renderCourierSearch() {
 
   body.innerHTML = csmResults.map(o => `
     <tr>
-      <td><input type="checkbox" class="csm-cb" value="${o.id}" onchange="csmUpdateCount()" /></td>
-      <td>${orderLink(o.name, o.id)}</td>
+      <td><input type="checkbox" class="csm-cb" value="${o.orderId}" onchange="csmUpdateCount()" /></td>
+      <td>${orderLink(o.name, o.orderId)}</td>
       <td>${statusPill(o.s1)}</td>
       <td>${statusPill(o.s2)}</td>
     </tr>`).join('');
@@ -3251,7 +3251,7 @@ function csmAddSelected() {
   if (!picked.length) { showToast('اختر أوردر واحد على الأقل', 'error'); return; }
 
   picked.forEach(id => {
-    const o = csmResults.find(r => r.id === id);
+    const o = csmResults.find(r => r.orderId === id);
     if (o) orderInfo[id] = { name: o.name, s1: o.s1, s2: o.s2, courier: o.courier, isCancelled: o.isCancelled };
   });
 
