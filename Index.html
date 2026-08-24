@@ -493,6 +493,8 @@ body {
 .reason-select.reason-missing { border-color: var(--red); background: var(--red-light); color: var(--red); font-weight: 700; }
 /* v4.1.0 — خانة "مش مطلوب" لصفوف Returned اللي بتتحل S2 (السبب مش مطلوب فيها) */
 .reason-na { color: var(--text-muted); font-size: 12px; font-style: italic; }
+/* v4.3.0 — شارة "السبب جاي من شوبيفاي" جنب قائمة الاختيار */
+.reason-src { display: block; margin-top: 4px; font-size: 10.5px; font-weight: 700; color: var(--text-sub); white-space: nowrap; cursor: help; }
 .del-x { background: none; border: none; color: var(--red); font-size: 15px; cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 5px; }
 .del-x:hover { background: var(--red-light); }
 .pill { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid; }
@@ -828,7 +830,22 @@ body {
 
       <div class="cl-version-block">
         <div class="cl-version-row">
-          <span class="cl-ver-badge" id="clLatestVerBadge">v4.2.0</span>
+          <span class="cl-ver-badge" id="clLatestVerBadge">v4.3.0</span>
+          <span class="cl-ver-date">24-08-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>السبب المسجّل مسبقًا من خدمة العملاء بيظهر جاهز — والموظف مش بيتطلب منه يختار تاني.</strong> لو الأوردر عليه قيمة في <code>custom.cancel_manual_reason</code> أو <code>custom.return_manual_reason</code> على شوبيفاي (خدمة العملاء بتكتبها وقت ما العميل يبلّغ بالسبب)، الأداة بتجيبها مع باقي حالة الأوردر وتعرضها <strong>مختارة سلفًا</strong> في قائمة السبب، وجنبها شارة <code>📋 مسجّل مسبقًا</code>. السطر مابيتلونش أحمر وزرار "تحديث الكل" مابيتقفلش بسببه.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>الموظف لسه <strong>يقدر يبدّل السبب</strong> عادي من نفس القائمة لو شايف إنه مش مظبوط — القائمة مفتوحة زي ما هي، مجرد إن القيمة الحالية مختارة فيها. لو بدّله، القيمة الجديدة بتتكتب فوق القديمة على شوبيفاي؛ ولو رجّعه لنفس القيمة الأصلية، بيرجع يتعامل كأنه ما اتغيّرش.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>الأداة مابتكتبش فوق سبب موجود من غير داعي.</strong> لما الموظف يسيب السبب المسجّل زي ما هو، الأداة <strong>مابتضيفش</strong> بند السبب في نداء <code>metafieldsSet</code> خالص — قيمة خدمة العملاء بتفضل على شوبيفاي حرفيًا زي ما هي، والنداء بيفضل أصغر (كل بند زيادة = مساحة فشل زيادة ممكن تسقّط النداء كله بما فيه كتابة الحالة).</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span>سجل العمليات (D1) بقى بيميّز <strong>مصدر</strong> السبب: <code>extra.reasonSource = 'operator'</code> لما موظف العمليات يختاره من الأداة، و<code>'existing'</code> لما يكون جاي جاهز من شوبيفاي. نص السجل نفسه بيوضّحها كمان (<code>· سبب: كذا (مسجّل مسبقًا)</code>) عشان تبان من تاب السجل من غير ما تفتح <code>extra</code>.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>قيمة سبب اتشالت من قائمة الميتافيلد مابتختفيش من الصف.</strong> لو السبب المسجّل على الأوردر مش ضمن قائمة الاختيارات الحالية (اتشالت من تعريف الميتافيلد بعد ما اتكتبت)، بيتضاف للقائمة كخيار صريح بدل ما الصف يرجع لـ "— اختر السبب —" وكأن الأوردر بلا سبب.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>(v4.2.1) "البحث عن أوردرات مندوب" كان بيضيف أوردرات فاضية بالكامل</strong> — الواجهة كانت لسه بتقرا الحقل باسم <code>id</code> بينما الـ Worker بقى بيرجّعه <code>orderId</code> من v3.7.0، فكل checkbox كانت قيمتها <code>undefined</code>: الصف يتضاف برقم أوردر <code>#—</code> وكل الأعمدة فاضية، وخطوة تأكيد المندوب تقول "بدون مندوب — <code>#undefined</code>". المسح بالسكانر والإدخال اليدوي ماكانوش متأثرين.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v4.2.0</span>
           <span class="cl-ver-date">23-08-2026</span>
         </div>
         <ul class="cl-items">
@@ -1054,7 +1071,7 @@ body {
             <li>تسجيل الدخول بالـ PIN — كل عملية تُنسب للموظف الذي نفّذها.</li>
             <li>اختيار الحالة المستهدفة فقط (Ready / Shipped / Delivered / Cancelled / Returned) من خطوة 1 — عند الاختيار يظهر بادج كبير باسم الحالة في منتصف الخطوة وزرار "تغيير الحالة" تحته (نفس تصميم تأكيد المندوب في v3.3.0)، وخلفية القسم كله بتاخد لون الحالة القوي الصريح.</li>
             <li>إضافة الأوردرات: سكانر، رقم يدوي، أو "بحث عن أوردرات مندوب معيّن" (متاح للحالات التي تتطلب مندوب) — بما فيها خيار "🚫 بدون مندوب" لجلب الأوردرات اللي مفيش عليها مندوب مسجَّل خالص. كل أوردر يُصنَّف تلقائياً S1 أو S2 فور إضافته، وأي انتقال غير مسموح يظهر بخلفية حمراء واضحة ويمنع التحديث حتى يُحذف. الجدول مقفول تلقائياً إلا لو فيه خطأ <strong>أو أوردر ناقصه سبب إلغاء/إرجاع (v4.2.0)</strong>، وحذف أوردر منه بيحافظ على حالة الفتح/القفل الحالية.</li>
-            <li><strong>سبب الإلغاء/الإرجاع (v4.0.0، دقّقها v4.1.0):</strong> لو الحالة المستهدفة <code>Cancelled</code> أو <code>Returned</code>، عمود إضافي "سبب الإلغاء/الإرجاع" يظهر جنب كل أوردر في الجدول — قائمة اختيار مسحوبة من الميتافيلدز <code>custom.cancel_manual_reason</code> / <code>custom.return_manual_reason</code>. الاختيار <strong>إلزامي بس للأوردرات اللي هتتحل فعليًا S1</strong> (<code>Cancelled</code>، أو <code>Returned</code> لما S2 يكون فاضي) — زرار "تحديث الكل" يفضل معطّل والسطر بيتلوّن أحمر لحد ما يتم اختيار سبب لكل أوردر S1 مضاف. أوردر <code>Returned</code> اللي هيتحل S2 (<code>Returned_S2</code>) بيوري خانة "— (S2، غير مطلوب) —" بدل قائمة الاختيار، والسبب مش مطلوب ولا بيتكتب عليه. <strong>(v4.2.0):</strong> لو حاول الموظف يضغط "تحديث الكل" وفيه سبب ناقص، الجدول بيتفتح بالقوة وتظهر نافذة تأكيد بأسماء الأوردرات الناقصة.</li>
+            <li><strong>سبب الإلغاء/الإرجاع (v4.0.0، دقّقها v4.1.0):</strong> لو الحالة المستهدفة <code>Cancelled</code> أو <code>Returned</code>، عمود إضافي "سبب الإلغاء/الإرجاع" يظهر جنب كل أوردر في الجدول — قائمة اختيار مسحوبة من الميتافيلدز <code>custom.cancel_manual_reason</code> / <code>custom.return_manual_reason</code>. الاختيار <strong>إلزامي بس للأوردرات اللي هتتحل فعليًا S1</strong> (<code>Cancelled</code>، أو <code>Returned</code> لما S2 يكون فاضي) — زرار "تحديث الكل" يفضل معطّل والسطر بيتلوّن أحمر لحد ما يتم اختيار سبب لكل أوردر S1 مضاف. أوردر <code>Returned</code> اللي هيتحل S2 (<code>Returned_S2</code>) بيوري خانة "— (S2، غير مطلوب) —" بدل قائمة الاختيار، والسبب مش مطلوب ولا بيتكتب عليه. <strong>(v4.2.0):</strong> لو حاول الموظف يضغط "تحديث الكل" وفيه سبب ناقص، الجدول بيتفتح بالقوة وتظهر نافذة تأكيد بأسماء الأوردرات الناقصة. <strong>(v4.3.0):</strong> لو الأوردر عليه سبب مسجّل أصلاً على شوبيفاي (من خدمة العملاء)، بيظهر مختار سلفًا في القائمة مع شارة <code>📋 مسجّل مسبقًا</code> — الصف مش بيتلوّن أحمر، الزرار مش بيتقفل، والأداة مابتكتبش فوق القيمة إلا لو الموظف بدّلها بنفسه.</li>
             <li>تأكيد المندوب: الأوردرات المضافة بتتجمّع في مجموعات باسم المندوب (بما فيها "بدون مندوب" كمجموعة عرض للأوردرات اللي مفيش عليها مندوب مسجَّل). لو مجموعة واحدة حقيقية بس، تظهر كاقتراح يتأكد بضغطة واحدة. لو أكتر من مجموعة، تتعرض كلها في جدول (اسم المندوب / عدد الأوردرات / أرقام الأوردرات) ولازم اختيار يدوي صريح. "بدون مندوب" مينفعش يتختار أبداً كمندوب نهائي — صفها بيظهر معطّل في الجدول، ولازم اختيار مندوب حقيقي من "📋 اختار مندوب آخر".</li>
             <li>الضغط على "تحديث الكل" — تُرسل الأوردرات للـ Worker على دفعات من 20، والـ Worker يتحقق من الانتقال ويحسم S1/S2 لكل أوردر بنفسه قبل التنفيذ.</li>
             <li>بعد انتهاء التحديث تظهر <strong>نافذة ملخص منبثقة</strong> (v3.6.0) فيها أرقام النتيجة بس — ناجح / محتاج مراجعة / فاشل — من غير تفاصيل أوردرات، ولما يكون فيه فشل بتتلوّن أحمر بالكامل وبيظهر بانر تنبيه. منها الموظف بيختار: 🆕 تسجيل أوردرات جديدة (إعادة ضبط كاملة لخطوة 1) · 📜 تفاصيل الأوردرات (يفتح تاب سجل العمليات) · 🖨️ طباعة (في حالة Shipped فقط).</li>
@@ -1123,10 +1140,13 @@ body {
 
           <h4>KEY VARIABLES (HTML)</h4>
           <ul>
-            <li><code>TOOL_VERSION = '4.2.0'</code> — المصدر الوحيد لرقم النسخة (زرار الهيدر + بادج آخر نسخة في سجل التحديثات + نص شاشة الدخول) عن طريق <code>renderVersionUI()</code>. لازم يساوي <code>VERSION</code> في الـ Worker.</li>
-            <li><code>orderReasons[id]</code> — السبب المختار لكل أوردر (v4.0.0)، بيتعرض/بيتطلب بس للأوردرات اللي <code>orderNeedsReason(id)</code> بترجع لها true (v4.1.0 — يعني الأوردر هيتحل S1 فعليًا). بيتصفّر عند تغيير الحالة المستهدفة (<code>selectTargetLabel()</code>)، مسح الكل، أو تسجيل خروج — وبيتنضّف لكل أوردر لوحده عند حذفه أو بعد نجاح تحديثه.</li>
+            <li><code>TOOL_VERSION = '4.3.0'</code> — المصدر الوحيد لرقم النسخة (زرار الهيدر + بادج آخر نسخة في سجل التحديثات + نص شاشة الدخول) عن طريق <code>renderVersionUI()</code>. لازم يساوي <code>VERSION</code> في الـ Worker.</li>
+            <li><code>orderReasons[id]</code> — السبب المختار لكل أوردر (v4.0.0)، بيتعرض/بيتطلب بس للأوردرات اللي <code>orderNeedsReason(id)</code> بترجع لها true (v4.1.0 — يعني الأوردر هيتحل S1 فعليًا). بيتصفّر عند تغيير الحالة المستهدفة (<code>selectTargetLabel()</code>)، مسح الكل، أو تسجيل خروج — وبيتنضّف لكل أوردر لوحده عند حذفه أو بعد نجاح تحديثه. <strong>(v4.3.0)</strong> معناه اتضيّق: بقى يعني حرفيًا "موظف العمليات اختار قيمة <strong>مختلفة</strong> عن المسجّلة على شوبيفاي". لو اختار نفس القيمة الموجودة، <code>setOrderReason()</code> بتمسح المدخل — والقيمة اللي بتتبعت للـ Worker في <code>reasons{}</code> هي دي بس، مش السبب الموجود، عشان الـ Worker يقدر يفرّق المصدر ومايكتبش فوق قيمة زي نفسها.</li>
             <li><code>reasonValuesCache</code> — <code>{ cancelReasons:[...], returnReasons:[...] }</code> من <code>reason_values</code> (v4.0.0) — بيتحمّل مرة واحدة (lazy، أول ما تُختار Cancelled أو Returned) ويفضل مخزّن لباقي الجلسة.</li>
-            <li><code>orderNeedsReason(id)</code> — (v4.1.0) بيرجّع true بس لو الحالة المستهدفة Cancelled/Returned <strong>و</strong> الأوردر ده تحديدًا هيتحل S1 (<code>clientResolveSpecifier()</code> على حالته الحالية). المصدر الوحيد اللي بيقرر إظهار/إلزام السبب لكل صف — مستخدم في <code>renderOrders()</code> / <code>updateActionState()</code> / <code>startUpdate()</code>.</li>
+            <li><code>orderNeedsReason(id)</code> — (v4.1.0) بيرجّع true بس لو الحالة المستهدفة Cancelled/Returned <strong>و</strong> الأوردر ده تحديدًا هيتحل S1 (<code>clientResolveSpecifier()</code> على حالته الحالية). بيقرر إظهار الـ <code>&lt;select&gt;</code> في الصف — مستخدم في <code>renderOrders()</code>.</li>
+            <li><code>existingReasonFor(id)</code> — (v4.3.0) السبب المسجّل أصلاً على الأوردر في شوبيفاي، مقروء من <code>orderInfo[id].cancelReason</code> أو <code>.returnReason</code> حسب الـ specifier المتحل لنفس الصف (مش حسب الحالة المستهدفة) — عشان يطابق بالظبط الحقل اللي <code>applyDirect()</code> هيكتب فيه في الـ Worker. بييجي من <code>order_statuses</code> (Worker v4.3.0+).</li>
+            <li><code>effectiveReasonFor(id)</code> — (v4.3.0) <code>orderReasons[id] || existingReasonFor(id)</code> — السبب الفعّال للصف، أيًا كان مصدره.</li>
+            <li><code>orderReasonMissing(id)</code> — (v4.3.0) <strong>الحاجز الوحيد</strong> اللي بيمنع التحديث: <code>orderNeedsReason(id) && !effectiveReasonFor(id)</code>. اتجمّع في دالة واحدة عشان التلات مواضع اللي كانت بتكرّر الشرط (<code>updateActionState()</code> / <code>applyAutoCollapseRule()</code> / <code>startUpdate()</code>) يفضلوا متفقين — أي واحدة تفضل بالشرط القديم هتقفل الزرار أو تفتح الجدول بالغلط على أوردر السبب بتاعه موجود فعلاً.</li>
             <li><code>summaryState</code> — <code>{ printableIds, courier, targetLabel }</code> لآخر دفعة — بيغذّي زرار الطباعة في نافذة الملخص</li>
             <li><code>LS_URL = 'order_status_worker_url'</code></li>
             <li><code>LS_SECRET = 'order_status_worker_secret'</code></li>
@@ -1165,7 +1185,7 @@ body {
             <li><strong>v3.7.0 — خط واحد + Tier حاوية واحد:</strong> IBM Plex Mono اتشال، <code>--font-mono</code> لسه موجود كمتغيّر CSS بس بقيمة <code>--font-body</code> نفسها (توافق مع الكلاسات القديمة بس). <code>--container-max</code> بقى 1200px (Tier M) بدل 1040px لأن تاب السجل بقى جدول حقيقي وفق معيار القسم الموحّد.</li>
             <li><strong>v4.0.0 — سبب الإلغاء/الإرجاع:</strong> العمود بيظهر لما الحالة المستهدفة <code>Cancelled</code> أو <code>Returned</code> (<code>needsReasonFor()</code>). القيم مسحوبة حصريًا من قوائم الاختيار المعرّفة في الميتافيلدز (<code>reason_values</code>) — الأداة ما بتخترعش أو بتحفظش قيم قديمة. الـ Worker مايتحققش بنفسه من إن القيمة ضمن الـ choices؛ شوبيفاي نفسها بترفض القيمة الخارجة عن القائمة على مستوى <code>metafieldsSet</code> (تعريف الميتافيلد Choice list)، وده بيسقط الأوردر بس مش الدفعة كلها. لو قائمة الاختيارات فاضية (تعريف الميتافيلد من غير choices) الأداة هتفضل معطّلة لهذه الحالة لحد ما تتضاف اختيارات — نفس سلوك <code>courier_values</code> بالظبط.</li>
             <li><strong>v4.1.0 — السبب إلزامي بس لـ S1:</strong> ضمن العمود اللي v4.0.0 عرّفه، الإلزام والكتابة الفعلية بقيا محصورين في الأوردرات اللي <code>orderNeedsReason(id)</code> بترجع لها true — يعني <code>specifier</code> المتحل (<code>clientResolveSpecifier()</code> في الواجهة، <code>resolveSpecifier()</code> في الـ Worker) بيساوي <code>Cancelled</code> أو <code>Returned</code>. أوردر <code>Returned</code> بيتحل <code>Returned_S2</code> (يعني كان أصلاً في مسار استرجاع/استبدال S2 — S2 عنده قيمة) بيوري خانة "مش مطلوب" في الجدول، مايتمنعش زرار "تحديث الكل" بسببه، ومايتكتبش عليه أي سبب على شوبيفاي حتى لو كان فيه قيمة قديمة متسجّلة في <code>orderReasons</code> (الـ Worker بيصفّرها في الصف — <code>row.reason = null</code> — لو الـ specifier المتحل مش S1). القرار ده بيتاخد بعد ما نجيب حالة الأوردر الفعلية من شوبيفاي، مش من نية الموظف وقت اختيار الحالة المستهدفة.</li>
-            <li><strong>v4.2.0 — الجدول بيتفتح تلقائي لو فيه سبب ناقص:</strong> <code>applyAutoCollapseRule()</code> بقت بتحسب <code>hasMissingReason</code> (نفس شرط <code>orderNeedsReason(id) && !orderReasons[id]</code>) جنب <code>hasBlocked</code> الموجود — أي حدث بيستدعيها (إضافة أوردر، حذف أوردر، اختيار حالة مستهدفة) بيفتح الجدول تلقائي طول ما فيه سبب ناقص، بنفس شرط "المستخدم ما تدخّلش يدوياً" (<code>ordersManualOverride</code>). كمان <code>startUpdate()</code> بقى بيفتح الجدول بالقوة ويعرض نافذة تأكيد بأسماء الأوردرات الناقصة (بدل توست بس) لو الموظف حاول يحدّث والسبب لسه ناقص — بنفس شكل نافذة "أوردرات غير مطابقة" الموجودة أصلاً لحالة الانتقال غير المسموح.</li>
+            <li><strong>v4.2.0 — الجدول بيتفتح تلقائي لو فيه سبب ناقص:</strong> <code>applyAutoCollapseRule()</code> بقت بتحسب <code>hasMissingReason</code> جنب <code>hasBlocked</code> الموجود (الشرط كان <code>orderNeedsReason(id) && !orderReasons[id]</code>، وبقى <code>orderReasonMissing(id)</code> في v4.3.0) — أي حدث بيستدعيها (إضافة أوردر، حذف أوردر، اختيار حالة مستهدفة) بيفتح الجدول تلقائي طول ما فيه سبب ناقص، بنفس شرط "المستخدم ما تدخّلش يدوياً" (<code>ordersManualOverride</code>). كمان <code>startUpdate()</code> بقى بيفتح الجدول بالقوة ويعرض نافذة تأكيد بأسماء الأوردرات الناقصة (بدل توست بس) لو الموظف حاول يحدّث والسبب لسه ناقص — بنفس شكل نافذة "أوردرات غير مطابقة" الموجودة أصلاً لحالة الانتقال غير المسموح.</li>
             <li>currentEmployee lives in JS memory only. Refresh = re-login, by design.</li>
             <li>Cairo is UTC+3. Egypt DST ends 29-10-2026 → both toCairo() here and CAIRO_OFFSET_HOURS in the Worker must change to +2 on that date.</li>
           </ul>
@@ -1188,7 +1208,7 @@ body {
     <button class="login-settings-btn missing" id="loginSettingsBtn" onclick="openSettings()">
       ⚙️ الإعدادات
     </button>
-    <span class="login-version-tag" id="loginVersionText">v4.2.0</span>
+    <span class="login-version-tag" id="loginVersionText">v4.3.0</span>
 
     <div class="login-top">
       <div class="login-icon">📦</div>
@@ -1671,7 +1691,7 @@ function orderLink(orderNumber, orderId) {
 // سجل التحديثات + نص شاشة الدخول) وبيتزامنوا يدويًا. دلوقتي المصدر واحد
 // و renderVersionUI() بتملاهم كلهم.
 // ⚠️ لازم يساوي VERSION في الـ Worker — الملفين بيترفعوا مع بعض.
-const TOOL_VERSION = '4.2.0';
+const TOOL_VERSION = '4.3.0';
 
 function renderVersionUI() {
   const v = `v${TOOL_VERSION}`;
@@ -2289,6 +2309,36 @@ function orderNeedsReason(id) {
   return spec === 'Cancelled' || spec === 'Returned';
 }
 
+// ─── v4.3.0 — السبب المسجّل أصلاً على الأوردر (من خدمة العملاء) ───
+// خدمة العملاء بتكتب custom.cancel_manual_reason / custom.return_manual_reason
+// وقت ما العميل يبلّغ بالسبب — قبل ما الأوردر يوصل لموظف العمليات خالص.
+// order_statuses بترجّعهم في cancelReason/returnReason (v4.3.0)، وhydrateOrders
+// بتحطهم في orderInfo[id]. الحقل اللي بيتقرا بيتحدد بالـ specifier المتحل
+// لنفس الصف — مش بالحالة المستهدفة — عشان يطابق بالظبط الحقل اللي applyDirect
+// هيكتب فيه على الـ Worker (Cancelled → cancel_...، Returned → return_...).
+function existingReasonFor(id) {
+  if (!needsReasonFor(currentTargetLabel)) return '';
+  const info = orderInfo[id] || {};
+  const spec = clientResolveSpecifier(currentTargetLabel, info.s1, info.s2);
+  if (spec === 'Cancelled') return (info.cancelReason || '').trim();
+  if (spec === 'Returned')  return (info.returnReason || '').trim();
+  return '';   // Returned_S2 — مالوش سبب بيتكتب أصلاً (v4.1.0)
+}
+
+// السبب الفعّال للصف: اختيار الموظف أولاً، وإلا السبب المسجّل مسبقًا.
+function effectiveReasonFor(id) {
+  return orderReasons[id] || existingReasonFor(id) || '';
+}
+
+// ─── v4.3.0 — الحاجز الوحيد اللي بيمنع التحديث ───
+// كان الشرط `orderNeedsReason(id) && !orderReasons[id]` متكرر في ٣ أماكن
+// (updateActionState · applyAutoCollapseRule · startUpdate). اتجمّع هنا عشان
+// السبب المسجّل مسبقًا يعدّي في التلاتة مع بعض — أي واحدة تفضل بالشرط القديم
+// هتقفل الزرار أو تفتح الجدول بالغلط على أوردر السبب بتاعه موجود فعلاً.
+function orderReasonMissing(id) {
+  return orderNeedsReason(id) && !effectiveReasonFor(id);
+}
+
 function currentReasonChoices() {
   if (currentTargetLabel === 'Cancelled') return reasonValuesCache?.cancelReasons || [];
   if (currentTargetLabel === 'Returned')  return reasonValuesCache?.returnReasons  || [];
@@ -2311,18 +2361,41 @@ function escAttr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
+// v4.3.0 — القائمة بتتعرض بنفس شكلها القديم، بس مختار فيها السبب الموجود
+// مسبقًا لو موجود. الموظف يقدر يبدّله عادي من غير أي خطوة زيادة؛ لو ساب القيمة
+// زي ما هي، الـ Worker مش هيكتب فوقها على شوبيفاي (reasonIsNew = false).
 function reasonSelectHTML(id, choices) {
-  const current = orderReasons[id] || '';
-  const missing = !current;
-  const loading = reasonValuesCache === null;
+  const picked   = orderReasons[id] || '';
+  const existing = existingReasonFor(id);
+  const current  = picked || existing;
+  const missing  = !current;
+  const loading  = reasonValuesCache === null;
   const placeholder = loading ? '⏳ جاري تحميل الأسباب...' : '— اختر السبب —';
+
+  // القيمة الموجودة على شوبيفاي ممكن ما تكونش ضمن الـ choices الحالية (اتشالت
+  // من تعريف الميتافيلد بعد ما اتكتبت). لازم تتضاف كخيار صريح — من غير كده
+  // الـ <select> هيرجع لأول option (الفاضية) والموظف هيشوف "اختر السبب" رغم إن
+  // الأوردر عليه سبب فعلاً، وهو بالظبط العطل اللي الإصدار ده بيحله.
+  const list = current && !choices.includes(current) ? [current, ...choices] : choices;
+
   const opts = [`<option value="">${placeholder}</option>`]
-    .concat(choices.map(c => `<option value="${escAttr(c)}" ${c === current ? 'selected' : ''}>${escAttr(c)}</option>`));
-  return `<select class="reason-select ${missing ? 'reason-missing' : ''}" ${loading ? 'disabled' : ''} onchange="setOrderReason('${id}', this.value)">${opts.join('')}</select>`;
+    .concat(list.map(c => `<option value="${escAttr(c)}" ${c === current ? 'selected' : ''}>${escAttr(c)}</option>`));
+
+  const select = `<select class="reason-select ${missing ? 'reason-missing' : ''}" ${loading ? 'disabled' : ''} onchange="setOrderReason('${id}', this.value)">${opts.join('')}</select>`;
+
+  // شارة المصدر — بتظهر بس لما السبب جاي من شوبيفاي والموظف ما بدّلوش.
+  if (!existing || picked) return select;
+  return `${select}<span class="reason-src" title="السبب مسجّل على الأوردر في شوبيفاي — تقدر تبدّله لو محتاج">📋 مسجّل مسبقًا</span>`;
 }
 
 function setOrderReason(id, value) {
-  if (value) orderReasons[id] = value; else delete orderReasons[id];
+  // v4.3.0 — orderReasons[id] معناه حرفيًا "موظف العمليات اختار قيمة **مختلفة**".
+  // لو رجّع الاختيار لنفس السبب المسجّل مسبقًا (أو للخانة الفاضية)، بنمسح
+  // القيمة من هنا — فالصف يرجع لحالته الأصلية: شارة "مسجّل مسبقًا" تظهر تاني،
+  // والـ Worker مايكتبش فوق قيمة خدمة العملاء من غير داعي.
+  const existing = existingReasonFor(id);
+  if (value && value !== existing) orderReasons[id] = value;
+  else delete orderReasons[id];
   updateActionState();
   renderOrders();
 }
@@ -2679,7 +2752,8 @@ function updateActionState() {
   const cfg = TARGET_LABELS[currentTargetLabel];
   // v4.1.0 — سبب الإلغاء/الإرجاع إلزامي بس للأوردرات اللي هتتحل فعليًا لـ S1
   // (orderNeedsReason يرجع false تلقائيًا للحالات التانية ولأوردرات S2)
-  const allReasonsSet = orders.every(id => !orderNeedsReason(id) || !!orderReasons[id]);
+  // v4.3.0 — والسبب المسجّل أصلاً على الأوردر بيعدّي الشرط (orderReasonMissing)
+  const allReasonsSet = !orders.some(id => orderReasonMissing(id));
   const ok  = !!cfg && orders.length > 0 && (!cfg.needsCourier || (courierConfirmed && !!currentCourier)) && allReasonsSet && !isUpdating;
 
   document.getElementById('updateBtn').disabled = !ok;
@@ -2846,7 +2920,7 @@ async function hydrateOrders(ids) {
 function applyAutoCollapseRule() {
   if (ordersManualOverride) { renderOrdersCollapseUI(); return; }
   const hasBlocked = orders.some(id => orderIsBlocked(id));
-  const hasMissingReason = orders.some(id => orderNeedsReason(id) && !orderReasons[id]);
+  const hasMissingReason = orders.some(id => orderReasonMissing(id));   // v4.3.0
   ordersCollapsed = !hasBlocked && !hasMissingReason;
   renderOrdersCollapseUI();
 }
@@ -2954,7 +3028,8 @@ function startUpdate() {
   // v4.1.0 — سبب الإلغاء/الإرجاع إلزامي بس للأوردرات اللي هتتحل فعليًا لـ S1
   // (Cancelled/Returned) — أوردرات Returned اللي هتتحل S2 مستثناة (orderNeedsReason)
   // (بعد فحص الأوردرات المحظورة — عشان الرسالة تبقى عن الأوردرات اللي هتتحدّث فعلاً)
-  const missingReason = orders.filter(id => orderNeedsReason(id) && !orderReasons[id]);
+  // v4.3.0 — الأوردر اللي عليه سبب مسجّل من خدمة العملاء مش "ناقص سبب"
+  const missingReason = orders.filter(id => orderReasonMissing(id));
   if (missingReason.length) {
     // v4.2.0 — الجدول ممكن يكون لسه مقفول (applyAutoCollapseRule بتفتحه تلقائي
     // بس عند إضافة/حذف أوردر أو تغيير الحالة، مش وقت الضغط على "تحديث الكل").
@@ -3012,6 +3087,14 @@ async function doStartUpdate() {
       // مستوى targetLabel بس (زي الـ Worker). أوردرات Returned اللي هتتحل S2
       // مالهاش select في الجدول أصلاً (v4.1.0)، فـ orderReasons[id] فاضي طبيعي
       // وبيتبعت '' — الـ Worker مش هيطلبه أو يكتبه لأوردرات S2.
+      //
+      // ⚠️ v4.3.0 — بنبعت `orderReasons[id]` **بس**، مش effectiveReasonFor(id).
+      // مقصود: الحقل ده معناه "اللي موظف العمليات اختاره بنفسه". لو بعتنا
+      // السبب المسجّل مسبقًا هنا، الـ Worker مش هيقدر يفرّق بين الاتنين، فـ
+      // reasonSource هيبقى 'operator' غلط، والأهم إنه هيكتب القيمة تاني فوق
+      // نفسها على شوبيفاي من غير داعي. الـ Worker بيقرأ الميتافيلد بنفسه
+      // (fetchOrderStates) وبيعمل fallback عليه — فالخانة الفاضية هنا معناها
+      // "سيب اللي موجود زي ما هو"، مش "مفيش سبب".
       if (needsReason) body.reasons = Object.fromEntries(chunk.map(id => [id, orderReasons[id] || '']));
       const data = await apiPost('update_status', body);
       batchId = batchId || data.batchId;
@@ -3251,6 +3334,7 @@ function csmAddSelected() {
   if (!picked.length) { showToast('اختر أوردر واحد على الأقل', 'error'); return; }
 
   picked.forEach(id => {
+    // v4.2.1 — كان `r.id`؛ الـ Worker بيرجّع الحقل باسم orderId من v3.7.0
     const o = csmResults.find(r => r.orderId === id);
     if (o) orderInfo[id] = { name: o.name, s1: o.s1, s2: o.s2, courier: o.courier, isCancelled: o.isCancelled };
   });
