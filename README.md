@@ -1,4 +1,8 @@
+<div dir="rtl" style="text-align: right;">
+
 # Order Status Updater
+
+![version](https://img.shields.io/badge/version-v1.1.0-blue)
 
 أداة داخلية لـ **EcomModa** — موظف العمليات بيحدّث مرحلة الأوردر: دورة S1
 (`custom.manual_status`) ودورة الإرجاع/الاستبدال S2 (`custom.status_2_r_e`)،
@@ -37,3 +41,7 @@ Cloudflare Workers Builds، والواجهة عبر GitHub Pages.
 ```
 git show b1e37b4:3.5.0.html
 ```
+
+آخر تحديث: 06-09-2026 — 14:30
+
+</div>

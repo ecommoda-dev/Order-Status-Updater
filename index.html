@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <!-- skills: html-builder v1.0.0 (ما قبل النظام) - 31-08-2026 -->
+  <!-- skills: html-builder v6.6.0 · worker-builder v2.1.0 · constants v1.4.0 - 06-09-2026 -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Order Status Updater — EcomModa</title>
@@ -25,6 +25,7 @@
   --text-primary:   #111827;
   --text-secondary: #6b7280;
   --text-muted:     #6b7280;
+  --text-mid:       #374151;
   --accent:         #2563eb;
   --accent-light:   #eff6ff;
   --accent-dark:    #1d4ed8;
@@ -36,20 +37,36 @@
   --red-border:     #fca5a5;
   --amber:          #d97706;
   --amber-light:    #fffbeb;
+  --amber-border:   #fde68a;
   --purple:         #7c3aed;
   --purple-light:   #f5f3ff;
   --purple-border:  #c4b5fd;
+  /* Extras — design-system.md (Standards #35). كل قيمة كانت متكرّرة كـ hex
+     حرفي في الملف ده بقى ليها اسم ودور. صفر تغيير بصري. */
+  --surface-hover:      #f0f4f8;
+  --neutral-dark:       #1a1d27;
+  --on-accent:          #ffffff;
+  --accent-border:      #bfdbfe;
+  --accent-hover:       #dbeafe;
+  --accent-hover-border:#93c5fd;
+  --green-dark:         #15803d;
+  --red-dark:           #b91c1c;
+  --amber-dark:         #92400e;
+  --purple-dark:        #4c1d95;
   --radius:         12px;
   --radius-sm:      8px;
   --shadow:         0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
   --container-max:  1200px;
   --font-body:      'Noto Sans Arabic', -apple-system, sans-serif;
   --font-mono:      'Noto Sans Arabic', -apple-system, sans-serif;
-  /* aliases used by the verbatim login-screen template */
+  /* أسماء بديلة مهجورة (Standards #36) — سايبينها شغّالة عشان الكلاسات
+     المنسوخة حرفيًا من قالب شاشة الدخول ما تتكسرش. أي كود جديد يستخدم
+     الأسماء الرسمية: --font-body · --font-mono · --text-primary ·
+     --text-secondary · --accent-light · --accent-border. */
   --font: var(--font-body); --mono: var(--font-mono);
   --bg-alt: var(--surface-2); --text: var(--text-primary);
   --text-sub: var(--text-secondary); --accent-bg: var(--accent-light);
-  --accent-b: #bfdbfe;
+  --accent-b: var(--accent-border);
 }
 
 /* ── Base ───────────────────────────────────────────────────── */
@@ -98,20 +115,20 @@ body {
 .hbtn:disabled { opacity: .5; cursor: not-allowed; }
 .hbtn.settings-configured { border-color: var(--green); color: var(--green); background: var(--green-light); }
 .hbtn.ver-btn {
-  border-color: #bfdbfe; color: #1d4ed8; background: #eff6ff;
+  border-color: var(--accent-border); color: var(--accent-dark); background: var(--accent-light);
   font-family: var(--font-mono); font-weight: 700;
 }
-.hbtn.ver-btn:hover { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+.hbtn.ver-btn:hover { background: var(--accent-hover); border-color: var(--accent-hover-border); color: var(--accent-dark); }
 .hbtn.active-user   { border-color: var(--green); color: var(--green); background: var(--green-light); }
 .hbtn.active-user:hover { border-color: var(--red); color: var(--red); background: var(--red-light); }
 
 /* ── Toast ──────────────────────────────────────────────────── */
 .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
-.toast { padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.2); animation: toastIn .3s ease; max-width: 320px; }
+.toast { padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: var(--on-accent); box-shadow: 0 4px 12px rgba(0,0,0,.2); animation: toastIn .3s ease; max-width: 320px; }
 @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
 .toast-success { background: var(--green); }
 .toast-error   { background: var(--red); }
-.toast-neutral { background: #1a1d27; }
+.toast-neutral { background: var(--neutral-dark); }
 
 .loading-spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -123,7 +140,7 @@ body {
 @keyframes modalIn { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .settings-modal-hdr { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 15px; font-weight: 700; }
 .modal-close-x { background: var(--red-light); border: 1.5px solid var(--red-border); color: var(--red); font-size: 14px; font-weight: 700; line-height: 1; padding: 4px 11px; border-radius: var(--radius-sm); font-family: inherit; cursor: pointer; transition: all .15s; }
-.modal-close-x:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.modal-close-x:hover { background: var(--red); color: var(--on-accent); border-color: var(--red); }
 .settings-modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
 .settings-field  { display: flex; flex-direction: column; gap: 5px; }
 .settings-label  { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px; }
@@ -132,7 +149,7 @@ body {
 .settings-modal-ftr { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
 .btn-modal-cancel { padding: 8px 14px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; cursor: pointer; }
 .btn-modal-cancel:hover { color: var(--text-primary); }
-.btn-modal-save { padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; }
+.btn-modal-save { padding: 8px 18px; background: var(--accent); color: var(--on-accent); border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; }
 .btn-modal-save:hover { background: var(--accent-dark); }
 
 /* ── Confirm Dialog ────────────────────────────────────────── */
@@ -142,14 +159,14 @@ body {
 .confirm-modal-hdr     { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 15px; font-weight: 700; color: var(--amber); display: flex; justify-content: space-between; align-items: center; }
 .confirm-modal-body    { padding: 16px 18px; font-size: 13px; line-height: 1.7; color: var(--text-primary); white-space: pre-line; max-height: 40vh; overflow-y: auto; }
 .confirm-modal-ftr     { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
-.btn-confirm-ok        { padding: 8px 18px; background: var(--red); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; }
-.btn-confirm-ok:hover  { background: #b91c1c; }
+.btn-confirm-ok        { padding: 8px 18px; background: var(--red); color: var(--on-accent); border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; }
+.btn-confirm-ok:hover  { background: var(--red-dark); }
 
 /* ── Main Tabs — full width, equal split (UI Standard v2) ───── */
 .main-tabs-bar { max-width: var(--container-max); margin: 0 auto 14px; display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px; box-shadow: var(--shadow); }
 .main-tab-btn { flex: 1; padding: 9px 10px; border: 2px solid transparent; background: transparent; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
 .main-tab-btn:hover  { background: var(--surface-2); color: var(--text-primary); }
-.main-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,.25); }
+.main-tab-btn.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,.25); }
 .tab-panel        { display: none; max-width: var(--container-max); margin: 0 auto; }
 .tab-panel.active { display: block; }
 
@@ -175,16 +192,16 @@ body {
 /* Changelog content */
 .cl-version-block { margin-bottom: 4px; }
 .cl-version-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.cl-ver-badge { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; direction: ltr; }
+.cl-ver-badge { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 5px; background: var(--accent-light); color: var(--accent-dark); border: 1px solid var(--accent-border); direction: ltr; }
 .cl-ver-badge.old { background: var(--surface-2); color: var(--text-secondary); border-color: var(--border-strong); }
 .cl-ver-date { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); direction: ltr; }
 .cl-items { list-style: none; display: flex; flex-direction: column; gap: 5px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
 .cl-version-block:last-child .cl-items { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
 .cl-item { display: flex; gap: 8px; font-size: 13px; align-items: flex-start; }
 .cl-tag { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; align-self: flex-start; margin-top: 2px; }
-.cl-tag.new    { background: #f0fdf4; color: #15803d; }
-.cl-tag.fix    { background: #fef2f2; color: #dc2626; }
-.cl-tag.change { background: #fffbeb; color: #92400e; }
+.cl-tag.new    { background: var(--green-light); color: var(--green-dark); }
+.cl-tag.fix    { background: var(--red-light); color: var(--red); }
+.cl-tag.change { background: var(--amber-light); color: var(--amber-dark); }
 
 /* ── Login Overlay ─────────────────────────────────────────── */
 .login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -230,11 +247,11 @@ body {
 .pin-key:hover:not(:disabled)  { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 .pin-key:active:not(:disabled) { transform: translateY(1px); }
 .pin-key.utility { color: var(--red); background: var(--red-light); border-color: var(--red-border); font-family: var(--font); font-size: 13px; font-weight: 900; }
-.pin-key.utility:hover:not(:disabled) { background: var(--red); color: #fff; border-color: var(--red); }
+.pin-key.utility:hover:not(:disabled) { background: var(--red); color: var(--on-accent); border-color: var(--red); }
 .pin-key:disabled { opacity: .55; cursor: not-allowed; }
 .login-alert { display: none; min-height: 38px; border-radius: 10px; border: 1px solid var(--red-border); background: var(--red-light); color: var(--red); padding: 9px 12px; font-size: 12px; font-weight: 800; text-align: center; line-height: 1.6; }
 .login-alert.visible { display: block; }
-.login-primary { display: none; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 58px; margin-top: 1px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-family: var(--font); font-size: 15px; font-weight: 900; cursor: pointer; transition: background .15s, opacity .15s, transform .06s; }
+.login-primary { display: none; align-items: center; justify-content: center; gap: 7px; width: 100%; min-height: 58px; margin-top: 1px; border: none; border-radius: 10px; background: var(--accent); color: var(--on-accent); font-family: var(--font); font-size: 15px; font-weight: 900; cursor: pointer; transition: background .15s, opacity .15s, transform .06s; }
 .login-primary.visible          { display: inline-flex; }
 .login-primary:hover:not(:disabled)  { background: var(--accent-dark); }
 .login-primary:active:not(:disabled) { transform: translateY(1px); }
@@ -259,7 +276,7 @@ body {
 .wiz-step.wiz-locked { opacity: .5; pointer-events: none; }
 .wiz-step-hdr { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; flex-wrap: wrap; }
 .wiz-step-title { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.wiz-step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; font-family: var(--font-mono); flex-shrink: 0; }
+.wiz-step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; font-family: var(--font-mono); flex-shrink: 0; }
 .wiz-step.done .wiz-step-num { background: var(--green); }
 .wiz-step-summary { display: flex; align-items: center; gap: 10px; }
 .wiz-chip { padding: 5px 12px; border-radius: 20px; background: var(--accent-light); color: var(--accent); font-size: 12px; font-weight: 700; }
@@ -290,9 +307,9 @@ body {
    "تغيير الحالة" في المنتصف (جوه الـ body) بنفس تصميم/حجم v3.3.0 بالظبط —
    البادج بيستخدم courier-confirmed-badge (فاتح على الخلفية الغامقة) بدل
    wiz-step1-badge القديمة اللي كانت في سطر الهيدر. راجع §TOOL-JS::renderStep1Body. */
-.wiz-step1-solid { color: #fff; }
+.wiz-step1-solid { color: var(--on-accent); }
 .wiz-step1-solid .wiz-step-title,
-.wiz-step1-solid .wiz-step-num { color: #fff; }
+.wiz-step1-solid .wiz-step-num { color: var(--on-accent); }
 .wiz-step1-solid .wiz-step-num { background: rgba(255,255,255,.25); }
 .wiz-step1-solid.c-purple { background: var(--purple); border-color: var(--purple); }
 .wiz-step1-solid.c-accent { background: var(--accent); border-color: var(--accent); }
@@ -305,11 +322,11 @@ body {
   padding: 5px 14px; border-radius: 20px; font-weight: 800; font-size: 13px;
 }
 .wiz-step1-change-btn {
-  padding: 8px 16px; border-radius: 8px; background: #fff; color: #111827;
-  border: 2px solid #111827; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  padding: 8px 16px; border-radius: 8px; background: var(--on-accent); color: var(--text-primary);
+  border: 2px solid var(--text-primary); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
   transition: all .15s;
 }
-.wiz-step1-change-btn:hover { background: #111827; color: #fff; }
+.wiz-step1-change-btn:hover { background: var(--text-primary); color: var(--on-accent); }
 
 /* Courier grid (candidates or fallback list) */
 .courier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
@@ -338,7 +355,7 @@ body {
 .courier-confirmed-badge.c-purple { background: var(--purple-light); border-color: var(--purple-border); color: var(--purple); }
 .courier-confirmed-badge.c-accent { background: var(--accent-light); border-color: var(--accent-b);      color: var(--accent); }
 .courier-confirmed-badge.c-green  { background: var(--green-light);  border-color: var(--green-border);  color: var(--green); }
-.courier-confirmed-badge.c-amber  { background: var(--amber-light);  border-color: #fde68a;              color: var(--amber); }
+.courier-confirmed-badge.c-amber  { background: var(--amber-light);  border-color: var(--amber-border);              color: var(--amber); }
 .courier-confirmed-badge.c-red    { background: var(--red-light);    border-color: var(--red-border);    color: var(--red); }
 .courier-suggest-btns { display: flex; gap: 8px; }
 
@@ -385,7 +402,7 @@ body {
 .in-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
 
 .btn { padding: 10px 16px; border-radius: 9px; border: none; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; white-space: nowrap; }
-.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary { background: var(--accent); color: var(--on-accent); }
 .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-sm { padding: 6px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-sub); cursor: pointer; font-family: inherit; transition: all .15s; }
@@ -393,7 +410,7 @@ body {
 .btn-sm.danger { color: var(--red); border-color: var(--red-border); }
 .btn-sm.danger:hover { background: var(--red-light); color: var(--red); }
 .btn-sm.go { color: var(--accent); border-color: var(--accent-b); background: var(--accent-light); }
-.btn-sm.go:hover { background: var(--accent); color: #fff; }
+.btn-sm.go:hover { background: var(--accent); color: var(--on-accent); }
 
 /* Summary / update action bar — 3-box grid (§TOOL::summary) */
 .sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
@@ -406,7 +423,7 @@ body {
 .sum-box-sub { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .sum-box-sub .pill { font-size: 10.5px; }
 .sum-acts { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-.btn-update { width: 100%; padding: 13px; border-radius: 10px; border: none; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; background: var(--text-muted); color: #fff; transition: all .15s; }
+.btn-update { width: 100%; padding: 13px; border-radius: 10px; border: none; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer; background: var(--text-muted); color: var(--on-accent); transition: all .15s; }
 .btn-update:disabled { opacity: .5; cursor: not-allowed; }
 .btn-update.c-accent { background: var(--accent); }
 .btn-update.c-green  { background: var(--green); }
@@ -453,10 +470,10 @@ body {
 .sum-modal-ftr    { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .btn-sum          { padding: 9px 16px; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; border: 1.5px solid var(--border-strong); background: transparent; color: var(--text-secondary); }
 .btn-sum:hover    { color: var(--text-primary); background: var(--surface-2); }
-.btn-sum.primary  { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-sum.primary:hover { background: var(--accent-dark); color: #fff; }
-.btn-sum.print    { background: var(--purple); border-color: var(--purple); color: #fff; }
-.btn-sum.print:hover   { filter: brightness(.92); color: #fff; }
+.btn-sum.primary  { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-sum.primary:hover { background: var(--accent-dark); color: var(--on-accent); }
+.btn-sum.print    { background: var(--purple); border-color: var(--purple); color: var(--on-accent); }
+.btn-sum.print:hover   { filter: brightness(.92); color: var(--on-accent); }
 
 /* Orders table — collapsible wrapper (§TOOL::ordersTable) */
 .ord-toggle-row { cursor: pointer; user-select: none; transition: background .12s; }
@@ -501,7 +518,7 @@ body {
 .pill { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid; }
 .pill.p-accent { background: var(--accent-light); color: var(--accent); border-color: var(--accent-b); }
 .pill.p-green  { background: var(--green-light);  color: var(--green);  border-color: var(--green-border); }
-.pill.p-amber  { background: var(--amber-light);  color: var(--amber);  border-color: #fde68a; }
+.pill.p-amber  { background: var(--amber-light);  color: var(--amber);  border-color: var(--amber-border); }
 .pill.p-red    { background: var(--red-light);    color: var(--red);    border-color: var(--red-border); }
 .pill.p-purple { background: var(--purple-light); color: var(--purple); border-color: var(--purple-border); }
 .pill.p-mute   { background: var(--surface-2);    color: var(--text-sub); border-color: var(--border); }
@@ -516,7 +533,7 @@ body {
 .csm-tbl thead th { position: sticky; top: 0; background: var(--surface-2); z-index: 5; text-align: center; padding: 8px 10px; font-size: 11px; font-weight: 700; color: var(--text-sub); border-bottom: 1.5px solid var(--border); }
 .csm-tbl tbody td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: center; }
 .csm-tbl input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
-.warn-box { background: var(--amber-light); border: 1.5px solid #fde68a; color: var(--amber); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; font-weight: 700; }
+.warn-box { background: var(--amber-light); border: 1.5px solid var(--amber-border); color: var(--amber); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; font-weight: 700; }
 
 /* ─── Log Tab — القسم الموحّد (data-table-standard.md) v3.7.0 ─── */
 /* .log-tab-wrap القديمة → .unified-section: كارت واحد للفلاتر+الجدول، بدون
@@ -525,7 +542,7 @@ body {
 .section-divider{border-top:1px solid var(--border);}
 .log-filters-section{}
 .log-filters-header{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;background:var(--surface-2);cursor:pointer;user-select:none;transition:background .12s;border-radius:var(--radius) var(--radius) 0 0;}
-.log-filters-header:hover{background:#f0f4f8;}
+.log-filters-header:hover{background:var(--surface-hover);}
 /* المجموعة اليمين: سهم الطي أول عنصر + أيقونة فلتر بس (بدون كلمة "الفلاتر") */
 .log-filters-title{display:flex;align-items:center;gap:10px;}
 .log-filters-toggle{font-size:13px;color:var(--text-muted);transition:transform .25s;}
@@ -545,12 +562,17 @@ body {
 .log-search-wrap{position:relative;}
 .log-search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text-muted);pointer-events:none;}
 .log-clear-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--radius-sm);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;height:34px;border:1px solid var(--red-border);color:var(--red);background:var(--red-light);}
-.log-clear-btn:hover{background:var(--red);color:#fff;border-color:var(--red);}
+.log-clear-btn:hover{background:var(--red);color:var(--on-accent);border-color:var(--red);}
 /* باهت ومعطّل بصريًا لما مفيش أي فلتر مفعّل (anyFilterActive) */
 .log-clear-btn.inactive{border-color:var(--border);color:var(--text-muted);background:var(--surface-2);cursor:not-allowed;opacity:.6;}
 .log-clear-btn.inactive:hover{background:var(--surface-2);color:var(--text-muted);border-color:var(--border);}
+/* Standards #30 — بانر التصدير المقصوص. ثابت فوق الجدول عشان يفضل ظاهر بعد
+   ما التوست يختفي والملف الناقص يكون لسه على الديسك. */
+.export-warn{margin:0 16px 12px;padding:10px 14px;border-radius:9px;
+  background:var(--amber-light);border:1px solid var(--amber);
+  color:var(--amber);font-size:13px;font-weight:600;line-height:1.7;}
 .log-stats-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface-2);flex-wrap:wrap;cursor:pointer;user-select:none;transition:background .12s;}
-.log-stats-bar:hover{background:#f0f4f8;}
+.log-stats-bar:hover{background:var(--surface-hover);}
 .log-stats-right{display:flex;align-items:center;gap:10px;}
 .tbl-toggle{font-size:13px;color:var(--text-muted);transition:transform .25s;}
 .tbl-toggle.open{transform:rotate(180deg);}
@@ -558,11 +580,11 @@ body {
 .results-label{font-size:14px;font-weight:800;color:var(--text-primary);white-space:nowrap;}
 .results-count{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:34px;padding:0 10px;font-family:var(--font-mono);font-size:17px;font-weight:800;color:var(--purple);background:var(--purple-light);border:1.5px solid var(--purple-border);border-radius:var(--radius-sm);}
 .log-refresh-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--green-border);border-radius:var(--radius-sm);font-family:inherit;font-size:11px;font-weight:600;color:var(--green);background:var(--green-light);cursor:pointer;transition:all .15s;white-space:nowrap;}
-.log-refresh-btn:hover{background:var(--green);color:#fff;}
+.log-refresh-btn:hover{background:var(--green);color:var(--on-accent);}
 .log-export-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--green-border);border-radius:var(--radius-sm);font-family:inherit;font-size:11px;font-weight:600;color:var(--green);background:var(--green-light);cursor:pointer;transition:all .15s;}
-.log-export-btn:hover{background:var(--green);color:#fff;}
+.log-export-btn:hover{background:var(--green);color:var(--on-accent);}
 .log-print-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--accent-b);border-radius:var(--radius-sm);font-family:inherit;font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-light);cursor:pointer;transition:all .15s;}
-.log-print-btn:hover{background:var(--accent);color:#fff;}
+.log-print-btn:hover{background:var(--accent);color:var(--on-accent);}
 .log-btns-end{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap;}
 .log-table-wrap.collapsed{display:none;}
 .log-body{overflow-y:auto;max-height:600px;}
@@ -594,7 +616,7 @@ body {
 .log-detail-tbl tr:last-child td { border-bottom: none; }
 .log-tag { padding: 1px 7px; border-radius: 5px; font-size: 11px; font-weight: 700; border: 1px solid; display: inline-block; }
 .log-tag.s1 { background: var(--accent-light); color: var(--accent); border-color: var(--accent-b); }
-.log-tag.s2 { background: var(--amber-light);  color: var(--amber);  border-color: #fde68a; }
+.log-tag.s2 { background: var(--amber-light);  color: var(--amber);  border-color: var(--amber-border); }
 .log-tag.cr { background: var(--purple-light); color: var(--purple); border-color: var(--purple-border); }
 .log-tag.emp{ background: var(--accent-light); color: var(--accent-dark); border-color: var(--accent-b); }
 .log-cb { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
@@ -613,7 +635,7 @@ body {
 .ms-btn.has-selection { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-light); }
 .ms-btn.open { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
 .ms-btn .ms-count {
-  font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: #fff;
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--on-accent);
   background: var(--accent); border-radius: 20px; padding: 1px 7px; min-width: 18px; text-align: center;
 }
 .ms-btn .ms-arrow { font-size: 9px; color: var(--text-muted); transition: transform .2s; flex-shrink: 0; }
@@ -636,7 +658,7 @@ body {
   border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 12px; font-weight: 700;
   cursor: pointer; user-select: none;
 }
-.ms-selectall-row:hover { background: #f0f4f8; }
+.ms-selectall-row:hover { background: var(--surface-hover); }
 .ms-list { max-height: 220px; overflow-y: auto; padding: 4px; }
 .ms-item {
   display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px;
@@ -667,11 +689,11 @@ body {
 .ms-chips-label { font-size: 11.5px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; }
 .ms-chip {
   display: flex; align-items: center; gap: 5px; background: var(--accent-light); color: var(--accent-dark);
-  border: 1px solid #bfdbfe; border-radius: 20px; padding: 3px 6px 3px 10px; font-size: 11.5px; font-weight: 600;
+  border: 1px solid var(--accent-border); border-radius: 20px; padding: 3px 6px 3px 10px; font-size: 11.5px; font-weight: 600;
 }
 .ms-chip button { border: none; background: rgba(37,99,235,.15); color: var(--accent-dark);
   width: 16px; height: 16px; border-radius: 50%; font-size: 11px; cursor: pointer; line-height: 1; }
-.ms-chip button:hover { background: var(--accent); color: #fff; }
+.ms-chip button:hover { background: var(--accent); color: var(--on-accent); }
 
 /* Date-range filter component (شارد, راجع references/date-range-filter.md) */
 .range-frow { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; }
@@ -707,7 +729,7 @@ body {
 /* Pagination */
 .pagination-row { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; flex-wrap: wrap; }
 .page-info { font-size: 13px; color: var(--text-sub); font-family: var(--mono); padding: 0 8px; }
-.page-btn { padding: 6px 14px; border-radius: 7px; border: 1px solid var(--border-strong); background: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font-body); color: var(--text-primary); }
+.page-btn { padding: 6px 14px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--on-accent); font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font-body); color: var(--text-primary); }
 .page-btn:hover:not(:disabled) { background: var(--accent-light); border-color: var(--accent-b); color: var(--accent); }
 .page-btn:disabled { opacity: .4; cursor: not-allowed; }
 
@@ -732,7 +754,10 @@ body {
   <div class="app-header-btns">
     <button class="hbtn active-user" id="activeUserBtn" onclick="doLogout()">👤 —</button>
     <button class="hbtn" onclick="openAbout()">ℹ️ عن الأداة</button>
-    <button class="hbtn ver-btn" id="verBtn" onclick="openChangelog()">v3.6.0 📋</button>
+    <button class="hbtn warn" id="verStaleBtn" style="display:none;border-color:var(--amber);
+            color:var(--amber);background:var(--amber-light);"
+            onclick="showWorkerStale()">⚠️ الـ Worker نسخة قديمة</button>
+    <button class="hbtn ver-btn" id="verBtn" onclick="openChangelog()">📋</button>
     <button class="hbtn" id="settingsBtn" onclick="openSettings()">⚙️ الإعدادات</button>
   </div>
 </div>
@@ -746,18 +771,10 @@ body {
     </div>
     <div class="settings-modal-body">
       <div class="settings-field">
-        <label class="settings-label">WORKER URL</label>
-        <input type="text" class="settings-input" id="cfgUrl" />
-      </div>
-      <div class="settings-field">
         <label class="settings-label">WORKER SECRET</label>
         <input type="password" class="settings-input" id="cfgSecret" />
       </div>
-      <div class="settings-field">
-        <label class="settings-label">ADMIN WORKER URL</label>
-        <input type="text" class="settings-input" id="cfgAdminUrl" />
-      </div>
-      <div class="settings-field" style="border-top:1.5px solid var(--border-light);padding-top:12px;">
+      <div class="settings-field" style="border-top:1.5px solid var(--border);padding-top:12px;">
         <label class="settings-label">فحص النظام</label>
         <button class="btn-sm" id="diagBtn" onclick="runDiag()">🩺 افحص الأداة والاتصالات</button>
         <div id="diagResult" style="margin-top:10px;font-size:12px;line-height:1.7;"></div>
@@ -831,7 +848,22 @@ body {
 
       <div class="cl-version-block">
         <div class="cl-version-row">
-          <span class="cl-ver-badge" id="clLatestVerBadge">v4.3.0</span>
+          <span class="cl-ver-badge" id="clLatestVerBadge">v4.4.0</span>
+          <span class="cl-ver-date">06-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>فلاتر السجل كانت بتتقفل بعد أول اختيار.</strong> كل فلاتر تاب السجل (الحالة · المندوب · النتيجة · الموظف) شكلها اختيار متعدد وكانت عمليًا بتقبل قيمة واحدة: القائمة بتتقفل بمجرد ما تختار، فمكنتش تعرف تختار تنين. دلوقتي القائمة بتفضل مفتوحة لحد ما تضغط برّاها.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>تصدير السجل كان بيقول «تم التصدير ✓» على ملف ناقص.</strong> فيه سقف ٢٠٠٠ صف على التصدير، ولو الفلاتر مطابقة لأكتر من كده الملف كان بينزل مقصوص <strong>من غير أي إشارة</strong>. دلوقتي بيظهر بانر أصفر ثابت فوق الجدول بيقول عدد الصفوف المصدَّرة <strong>من أصل</strong> الإجمالي المطابق، ورسالة النجاح الخضرا مابتظهرش غير لما الملف يكون كامل فعلاً.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>تحذير لو الـ Worker نسخته أقدم من اللي الأداة محتاجاها.</strong> زرار برتقالي في الهيدر بيبان بس لو النشر على كلاودفلير ما نزلش (rollback أو Promote ناقص). ده بيمنع الحالة اللي الأداة فيها تشتغل «عادي» وهي بتطلب من الموظف سبب إلغاء مسجّل قدامه على شوبيفاي أصلاً.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>شاشة الإعدادات بقى فيها حقل واحد بس: WORKER SECRET.</strong> حقلا <code>WORKER URL</code> و<code>ADMIN WORKER URL</code> اتشالوا وبقوا ثوابت جوه الأداة — الموظف اللي بيفتح الرابط لأول مرة مابقاش محتاج يدخّلهم، بيكتب السر وخلاص.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>تأكيد الإلغاء بقى بيقول إيه اللي حصل.</strong> لما الأداة ما تقدرش تتأكد إن الإلغاء اتنفذ على شوبيفاي، التحذير الأصفر بقى بيوضّح حالة العملية ومدة الانتظار وعدد المحاولات بدل «لسه ما اتأكدش» المجرّدة — عشان تعرف تراجع الأوردر وإنت فاهم.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>تنضيف داخلي: كل ألوان الأداة بقت من مصدر واحد، وإرشاد اختيار الموظف في شاشة الدخول بقى مكتوب مرة واحدة بدل أربع مرات حوالين نفس القائمة. صفر تغيير في الشكل.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge">v4.3.0</span>
           <span class="cl-ver-date">24-08-2026</span>
         </div>
         <ul class="cl-items">
@@ -1135,7 +1167,7 @@ body {
             <li><code>سجل العمليات (جدول أعمدة + تفاصيل قابلة للتوسيع)</code> — HTML §LOG-JS — <code>get_logs</code> / <code>renderLog()</code></li>
             <li><code>فلاتر السجل (حالة/مندوب/النتيجة/موظف اختيار متعدد + بحث + فترة تاريخ في صف منفصل، قسم موحّد unified-section من v3.7.0)</code> — HTML §LOG-JS — <code>msState</code> / <code>fetchLog()</code> / <code>anyFilterActive()</code> — Worker §SHARED — <code>buildLogFilterSQL()</code></li>
             <li><code>ترتيب أعمدة السجل (تاريخ/حالة/مندوب/موظف — تصاعدي/تنازلي/بلا ترتيب، على السيرفر)</code> — HTML §LOG-JS — <code>toggleLogSort()</code> / <code>logSortState</code> — Worker §SHARED — <code>buildLogSortSQL()</code> / <code>LOG_SORT_COLUMNS</code></li>
-            <li><code>تصدير XLSX (الكل أو المحدد)</code> — HTML §LOG-JS — <code>exportLogXLSX()</code> / <code>exportSelectedLogXLSX()</code> / <code>buildAndDownloadWorkbook()</code></li>
+            <li><code>تصدير XLSX (الكل أو المحدد)</code> — HTML §LOG-JS — <code>exportLogXLSX()</code> / <code>exportSelectedLogXLSX()</code> / <code>buildAndDownloadWorkbook()</code> / <code>reportExportResult()</code> / <code>clearExportWarn()</code>. (v4.4.0) <code>get_logs_export</code> بيرجّع <code>{ cap, total, truncated }</code> والواجهة بتعرض بانر ثابت <code>#logExportWarn</code> بالرقمين لو الملف اتقص — رسالة النجاح في فرع <code>else</code> بس.</li>
             <li><code>D1 log write (صف لكل أوردر)</code> — Worker §HANDLER — <code>writeLog()</code></li>
           </ul>
 
@@ -1149,9 +1181,9 @@ body {
             <li><code>effectiveReasonFor(id)</code> — (v4.3.0) <code>orderReasons[id] || existingReasonFor(id)</code> — السبب الفعّال للصف، أيًا كان مصدره.</li>
             <li><code>orderReasonMissing(id)</code> — (v4.3.0) <strong>الحاجز الوحيد</strong> اللي بيمنع التحديث: <code>orderNeedsReason(id) && !effectiveReasonFor(id)</code>. اتجمّع في دالة واحدة عشان التلات مواضع اللي كانت بتكرّر الشرط (<code>updateActionState()</code> / <code>applyAutoCollapseRule()</code> / <code>startUpdate()</code>) يفضلوا متفقين — أي واحدة تفضل بالشرط القديم هتقفل الزرار أو تفتح الجدول بالغلط على أوردر السبب بتاعه موجود فعلاً.</li>
             <li><code>summaryState</code> — <code>{ printableIds, courier, targetLabel }</code> لآخر دفعة — بيغذّي زرار الطباعة في نافذة الملخص</li>
-            <li><code>LS_URL = 'order_status_worker_url'</code></li>
-            <li><code>LS_SECRET = 'order_status_worker_secret'</code></li>
-            <li><code>LS_ADMIN_URL = 'admin_worker_url'</code> (shared — never rename)</li>
+            <li><code>WORKER_URL</code> / <code>ADMIN_WORKER_URL</code> — (v4.4.0) constants ثابتة في <code>§CONFIG</code>. اتشالوا من شاشة الإعدادات ومن <code>localStorage</code> (Standards #28): الرابطين مش سر — الحماية في <code>WORKER_SECRET</code> + CORS allowlist. ده اللي قفل فخ «الموظف لازم يدخل الإعدادات أول مرة». قيمة <code>ADMIN_WORKER_URL</code> من <code>ecommoda-constants</code> §5b.</li>
+            <li><code>LS_SECRET = 'order_status_worker_secret'</code> — <strong>مفتاح الـ localStorage الوحيد الباقي</strong></li>
+            <li><code>MIN_WORKER_VERSION = '4.3.0'</code> — (v4.4.0) أقل نسخة Worker الواجهة بتشتغل معاها. <code>checkWorkerVersion()</code> بتقارن رقميًا بـ <code>cmpVersion()</code> وبتولّع <code>#verStaleBtn</code> بس لو الـ Worker <strong>أقدم</strong> — مش عند أي اختلاف. مالهاش علاقة بـ <code>TOOL_VERSION</code>.</li>
             <li><code>UPDATE_CHUNK = 20</code> (orders per update_status call)</li>
             <li><code>LOG_PAGE_SIZE = 100</code></li>
             <li><code>NO_COURIER_LABEL = 'بدون مندوب'</code> — sentinel label used to group orders whose <code>custom.courier</code> is blank; translated back to an empty string before it's ever sent to the Worker as an actual courier value.</li>
@@ -1215,15 +1247,14 @@ body {
       <div class="login-icon">📦</div>
       <div class="login-title">Order Status Updater</div>
       <div class="login-desc">تحديث حالة الأوردرات (S1 / S2 تلقائي)</div>
-      <div class="login-sub" id="loginSub">اختر اسمك للمتابعة</div>
+      <div class="login-sub" id="loginSub"></div>
     </div>
 
     <div class="login-body">
 
       <div class="login-field">
-        <label for="loginSelect">الموظف</label>
         <select id="loginSelect" onchange="handleEmployeeChange()" disabled>
-          <option value="">— اختر —</option>
+          <option value="">اختر اسمك للمتابعة</option>
         </select>
         <div class="login-status warn" id="loginStatus">الإعدادات غير مكتملة — افتح الإعدادات أولاً.</div>
       </div>
@@ -1575,6 +1606,8 @@ body {
       </div>
     </div>
 
+    <div id="logExportWarn" class="export-warn" style="display:none;"></div>
+
     <div class="log-table-wrap" id="logTableWrap">
       <div class="log-body" id="logBody">
         <div class="log-empty">اضغط تحديث لعرض السجل</div>
@@ -1630,16 +1663,22 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG — LS keys + getConfig() + apiPost() + apiGet() + orderLink()
 // ══════════════════════════════════════════════════════════════
-const LS_URL       = 'order_status_worker_url';
-const LS_SECRET    = 'order_status_worker_secret';
-const LS_ADMIN_URL = 'admin_worker_url';          // shared across tools — never rename
-const SHOP_DOMAIN  = '6c7e1a-53.myshopify.com';   // constant — same value in every tool
+// ⛔ LS_URL و LS_ADMIN_URL اتشالوا (Standards #28، v4.4.0). الرابطين **مش سر**:
+//    الحماية في WORKER_SECRET + CORS allowlist مش في إخفاء الرابط، واسم الـ
+//    Worker بيتحدد وقت الإنشاء ومايتغيّرش. كونهم كانوا حقول إعدادات هو السبب
+//    المباشر للفخ الموثّق في CLAUDE.md: الموظف اللي بيفتح الرابط أول مرة كان
+//    لازم يدخل الإعدادات ويكتبهم. دلوقتي الأداة شغّالة من أول فتحة.
+const WORKER_URL       = 'https://order-status-updater-worker.ecommoda-dev.workers.dev';
+const ADMIN_WORKER_URL = 'https://employees-admin-panel-worker.ecommoda-dev.workers.dev';  // ecommoda-constants §5b
+
+const LS_SECRET    = 'order_status_worker_secret';   // السر الوحيد اللي فعلاً بيتخزّن
+const SHOP_DOMAIN  = '6c7e1a-53.myshopify.com';      // constant — same value in every tool
 
 function getConfig() {
   return {
-    workerUrl:    localStorage.getItem(LS_URL)       || '',
-    workerSecret: localStorage.getItem(LS_SECRET)    || '',
-    adminUrl:     localStorage.getItem(LS_ADMIN_URL) || '',
+    workerUrl:    WORKER_URL,
+    workerSecret: localStorage.getItem(LS_SECRET) || '',
+    adminUrl:     ADMIN_WORKER_URL,
   };
 }
 
@@ -1692,7 +1731,54 @@ function orderLink(orderNumber, orderId) {
 // سجل التحديثات + نص شاشة الدخول) وبيتزامنوا يدويًا. دلوقتي المصدر واحد
 // و renderVersionUI() بتملاهم كلهم.
 // ⚠️ لازم يساوي VERSION في الـ Worker — الملفين بيترفعوا مع بعض.
-const TOOL_VERSION = '4.3.0';
+const TOOL_VERSION = '4.4.0';
+
+// §CONFIG::minWorker — أقل نسخة Worker الواجهة دي بتشتغل معاها (Standards #29).
+// v4.3.0 هي النسخة اللي ضافت cancelReason/returnReason في رد order_statuses،
+// واللي الواجهة معتمدة عليها عشان ما تطلبش من الموظف سبب مسجّل قدامه أصلًا.
+// ⚠️ صيانة: أي endpoint/حقل جديد الصفحة تعتمد عليه → ارفع الرقم ده لنسخة
+//    الـ Worker اللي ضافته، في نفس التسليم.
+// ⚠️ مالهاش أي علاقة بـ TOOL_VERSION — دي بتوصف أقل Worker مقبول، مش الصفحة.
+const MIN_WORKER_VERSION = '4.3.0';
+
+let workerVersion = null;
+
+// مقارنة **رقمية** مش نصية — "10" أصغر من "9" لو اتقارنوا كنص.
+function cmpVersion(a, b) {
+  const pa = String(a).replace(/^v/, '').split('.').map(Number);
+  const pb = String(b).replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
+// 🔴 السطر الأول جوّه الدالة إلزامي (Standards #29): من غيره مودال الإعدادات
+//    بيفتح **لوحده** على أي جهاز جديد فوق شاشة الدخول ويغطّي زرار الإعدادات
+//    اللي جوّه الكارت — الدالة بتتنادى وقت الـ Init، و apiGet بيفتح الإعدادات
+//    لو مفيش سر. (وسايبينه أول سطر عشان فحص grep -A2 في Step 9 يشوفه.)
+async function checkWorkerVersion() {
+  if (!isConfigured()) return;
+  try {
+    const d = await apiGet('get_config');
+    workerVersion = d.version || null;
+    // يولّع **بس** لو الـ Worker أقدم من الحد الأدنى — يعني rollback أو بناء
+    // فاشل أو Promote ناقص. التطابق الحرفي مرفوض: الرقمين مستقلين بالتصميم،
+    // واختلافهم وضع طبيعي، والتحذير الكاذب الدايم بيتعوّد عليه الموظف.
+    const stale = workerVersion && cmpVersion(workerVersion, MIN_WORKER_VERSION) < 0;
+    const btn = document.getElementById('verStaleBtn');
+    if (btn) btn.style.display = stale ? '' : 'none';
+  } catch { /* الإعدادات ممكن تكون لسه مش مضبوطة */ }
+}
+
+function showWorkerStale() {
+  showToast(
+    `الـ Worker نسخته ${workerVersion} والواجهة محتاجة ${MIN_WORKER_VERSION} على الأقل — ` +
+    `التحديث على ما يبدو ما نزلش. راجع Deployments و Promote في كلاودفلير.`,
+    'error', 7000
+  );
+}
 
 function renderVersionUI() {
   const v = `v${TOOL_VERSION}`;
@@ -1706,27 +1792,23 @@ function renderVersionUI() {
 
 function openSettings() {
   const c = getConfig();
-  document.getElementById('cfgUrl').value      = c.workerUrl;
-  document.getElementById('cfgSecret').value   = c.workerSecret;
-  document.getElementById('cfgAdminUrl').value = c.adminUrl;
+  document.getElementById('cfgSecret').value = c.workerSecret;
   document.getElementById('settingsOverlay').classList.add('open');
 }
 function closeSettings()            { document.getElementById('settingsOverlay').classList.remove('open'); }
 function closeSettingsOnBackdrop(e) { if (e.target === e.currentTarget) closeSettings(); }
 
 function saveSettings() {
-  const url    = document.getElementById('cfgUrl').value.trim();
   const secret = document.getElementById('cfgSecret').value.trim();
-  if (!url || !secret) { showToast('الرجاء إدخال الـ URL والـ Secret', 'error'); return; }
+  if (!secret) { showToast('الرجاء إدخال الـ Secret', 'error'); return; }
 
-  localStorage.setItem(LS_URL,       url.replace(/\/$/, ''));
-  localStorage.setItem(LS_SECRET,    secret);
-  localStorage.setItem(LS_ADMIN_URL, document.getElementById('cfgAdminUrl').value.trim().replace(/\/$/, ''));
+  localStorage.setItem(LS_SECRET, secret);
 
   updateSettingsButtonsState();
   closeSettings();
   showToast('تم حفظ الإعدادات ✓', 'success');
   loadEmployeesList();
+  checkWorkerVersion();
 }
 
 function updateSettingsBtn() {
@@ -1734,7 +1816,7 @@ function updateSettingsBtn() {
 }
 function updateSettingsButtonsState() {
   updateSettingsBtn();
-  updateLoginSettingsBtnState();
+  updateLoginSettingsBtn();
 }
 
 // ─── §SETTINGS-JS::runDiag — يستدعي ?action=diag ويعرض كل فحص كسطر (لا يعرض قيمة أي سر) ───
@@ -1891,7 +1973,7 @@ async function loadEmployeesList() {
   const sel    = document.getElementById('loginSelect');
   const status = document.getElementById('loginStatus');
   clearLoginAlert();
-  sel.innerHTML = '<option value="">— اختر —</option>';
+  sel.innerHTML = '<option value="">اختر اسمك للمتابعة</option>';
   sel.disabled  = true;
 
   if (!isConfigured()) {
@@ -1916,9 +1998,9 @@ async function loadEmployeesList() {
 
     sel.disabled       = false;
     status.className   = employees.length ? 'login-status info' : 'login-status warn';
-    status.textContent = employees.length
-      ? 'اختر الموظف للمتابعة.'
-      : 'لا يوجد موظفون نشطون.';
+    // فاضية لما فيه موظفين — الإرشاد بقى في placeholder القائمة نفسها.
+    // (باقي رسايل loginStatus — التحميل/الفشل/القائمة الفاضية — زي ما هي.)
+    status.textContent = employees.length ? '' : 'لا يوجد موظفون نشطون.';
   } catch (err) {
     status.className   = 'login-status error';
     status.textContent = 'تعذّر تحميل قائمة الموظفين.';
@@ -1974,7 +2056,8 @@ function renderLoginMode(mode) {
 
   const sub = document.getElementById('loginSub');
   if (mode === 'employee') {
-    sub.textContent      = 'اختر اسمك للمتابعة';
+    sub.textContent      = '';   // Standards #34 — الإرشاد في placeholder القائمة
+
     pinLabel.textContent = 'أدخل الـ PIN';
     primary.textContent  = 'دخول';
     primary.disabled     = true;
@@ -2190,7 +2273,7 @@ async function doLogout() {
   document.getElementById('loginOverlay').classList.remove('hidden');
 }
 
-function updateLoginSettingsBtnState() {
+function updateLoginSettingsBtn() {
   const btn = document.getElementById('loginSettingsBtn');
   if (!btn) return;
   btn.classList.toggle('ready',   isConfigured());
@@ -3102,8 +3185,6 @@ async function doStartUpdate() {
       for (const r of (data.results || [])) {
         // §TOOL-JS::٣-حالات (v3.5.0، راجع html-builder Step 3C) — الحالة جاية
         // من السيرفر كما هي، مش مشتقة من success ? … : … بس.
-        // §TOOL-JS::٣-حالات (v3.5.0، راجع html-builder Step 3C) — الحالة جاية
-        // من السيرفر كما هي، مش مشتقة من success ? … : … بس.
         if (r.status === 'success')      { okCount++;   succeeded.push(r.orderId); }
         else if (r.status === 'warning') { warnCount++; succeeded.push(r.orderId); }
         else                             { errCount++; }
@@ -3371,7 +3452,7 @@ async function printManifest(orderIds, courier) {
     const cod = Math.round(parseFloat(d.cod || 0));
     return `<tr>
       <td style="text-align:center;font-weight:600">${i + 1}</td>
-      <td style="font-weight:700;color:#2563eb;white-space:nowrap">${d.orderName || '—'}</td>
+      <td style="font-weight:700;color:var(--accent);white-space:nowrap">${d.orderName || '—'}</td>
       <td style="text-align:center"><svg id="bc-${i}" style="display:block;margin:auto;shape-rendering:crispEdges"></svg></td>
       <td>${d.customerName || '—'}</td>
       <td style="text-align:center;direction:ltr;white-space:nowrap">${d.phone || '—'}</td>
@@ -3429,7 +3510,7 @@ svg rect,svg path{shape-rendering:crispEdges}
   <tbody>${rows}</tbody>
 </table>
 <div class="mf">
-  <div><div style="font-size:13px;color:#6b7280">إجمالي التحصيل</div>
+  <div><div style="font-size:13px;color:var(--text-secondary)">إجمالي التحصيل</div>
     <div class="tv">${Math.round(totalCOD).toLocaleString('en-US')} EGP</div></div>
   <div class="sb">توقيع المندوب<br><br><br></div>
   <div class="sb">توقيع المستلم<br><br><br></div>
@@ -3588,6 +3669,12 @@ function msClear(key) {
 }
 
 document.addEventListener('click', (e) => {
+  // 🔴 Standards #32 — msRenderList بتعيد بناء innerHTML عند كل اختيار، فالعنصر
+  //    المضغوط بيتشال من الـ DOM قبل ما الحدث يوصل هنا، و contains(detached)
+  //    بترجّع false فالقائمة كانت بتتقفل بعد **أول** اختيار — يعني فلتر اسمه
+  //    multi-select وعمليًا قيمة واحدة، بلا أي رسالة. الهدف اللي مش في الصفحة
+  //    أصلاً مش معروف كان فين وقت الضغط، فمفيش قرار قفل.
+  if (!document.contains(e.target)) return;
   Object.keys(msState).forEach(k => {
     const wrap = document.getElementById(`msWrap-${k}`);
     if (wrap && !wrap.contains(e.target)) {
@@ -3782,6 +3869,10 @@ function buildLogParams() {
 }
 
 async function fetchLog() {
+  // نقطة اختناق واحدة لمسح بانر التصدير: كل تغيير فلتر (بحث · multi-select ·
+  // مدى تاريخ · ترتيب) بيعدّي من هنا، فمستحيل تحذير قديم يفضل معلّق على فلاتر
+  // جديدة. (Standards #30 — «البانر يتمسح مع أي تغيير في الفلاتر».)
+  clearExportWarn();
   const body = document.getElementById('logBody');
   body.innerHTML = '<div class="log-empty"><div class="loading-spinner"></div><p style="margin-top:8px;font-size:12px">جاري التحميل...</p></div>';
 
@@ -4060,18 +4151,42 @@ async function buildAndDownloadWorkbook(entries, filenameSuffix) {
   a.download = `order-status-log-${filenameSuffix}-${new Date().toISOString().slice(0, 10)}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast(`✅ تم تصدير ${entries.length} صف`, 'success');
   return true;
+}
+
+function clearExportWarn() {
+  const w = document.getElementById('logExportWarn');
+  if (w) { w.style.display = 'none'; w.innerHTML = ''; }
+}
+
+// الحقيقة بتيجي من الـ Worker (cap/total/truncated) — ممنوع الواجهة تكتب
+// السقف عندها، وإلا يتغيّر في مكان ويفضل قديم في التاني. (Standards #30)
+function reportExportResult(entries, data) {
+  const n = entries.length.toLocaleString('en-US');
+  const truncated = data && (data.truncated === true || (data.cap && entries.length >= data.cap));
+  if (truncated) {
+    const warn = document.getElementById('logExportWarn');
+    warn.innerHTML = `⚠️ <b>التصدير اتقص</b> — الملف فيه ${n} صف`
+      + (data.total != null ? ` من أصل <b>${data.total.toLocaleString('en-US')}</b> مطابقين للفلاتر` : '')
+      + `. ضيّق الفترة أو الفلاتر وصدّر على دفعات.`;
+    warn.style.display = '';
+    showToast(`⚠️ التصدير اتقص عند ${n} صف — الملف مش كامل`, 'error', 7000);
+  } else {
+    showToast(`✅ تم تصدير ${n} صف`, 'success');
+  }
 }
 
 // ─── §LOG-JS::exportLogXLSX — كل الصفوف المطابقة للفلاتر الحالية ───
 async function exportLogXLSX() {
+  clearExportWarn();
   const params = buildLogParams();
   const btn = document.getElementById('logExportBtn');
   btn.textContent = '⏳ جاري التصدير...';
   try {
-    const data = await apiGet('get_logs_export', params);
-    await buildAndDownloadWorkbook(data.entries || [], 'all');
+    const data    = await apiGet('get_logs_export', params);
+    const entries = data.entries || [];
+    await buildAndDownloadWorkbook(entries, 'all');
+    reportExportResult(entries, data);
   } catch (e) {
     showToast(`تعذّر التصدير: ${e.message}`, 'error');
   }
@@ -4085,6 +4200,8 @@ async function exportSelectedLogXLSX() {
   const entries = selected.flatMap(g => g.rows.map(r => r.entry));
   if (!entries.length) { showToast('لا توجد عمليات محددة', 'error'); return; }
   await buildAndDownloadWorkbook(entries, 'selected');
+  // مجموعة مختارة من الصفحة المعروضة — مفيش سقف سيرفر عليها، فمفيش قص ممكن.
+  showToast(`✅ تم تصدير ${entries.length.toLocaleString('en-US')} صف`, 'success');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -4094,6 +4211,7 @@ renderVersionUI();
 renderStep1Body();
 updateSettingsButtonsState();
 loadEmployeesList();
+checkWorkerVersion();
 
 </script>
 
