@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// Order Status Updater — Worker  v4.3.1
-// skills: worker-builder v1.1.0 · constants v1.2.0 — 31-08-2026
+// Order Status Updater — Worker  v4.4.0
+// skills: worker-builder v2.1.0 · constants v1.4.0 · order-lifecycle v1.2.0 — 06-09-2026
 // Account : ecommoda-dev   |   D1: ecommoda-dev-logs (binding: DB)
 // ---------------------------------------------------------------------------
 // 🔗🔗 قارئ خارجي لسجل الأداة دي — اقرا قبل أي تعديل على شكل `extra`
@@ -21,6 +21,27 @@
 // أو في TOOL_NAME: افتح §TODAY-IMPORT في cod-payment-center-worker وعدّله
 // معاه في نفس التسليم. الأداتين على نفس قاعدة D1 (ecommoda-dev-logs).
 // ---------------------------------------------------------------------------
+// v4.4.0 — مطابقة worker-builder v2.1.0 (06-09-2026):
+//   البندان الكاسران في worker-builder v2.0.0 كانوا لسه مفتوحين هنا — البصمة
+//   كانت v1.1.0، يعني الأداة ما اتراجعتش على المهارة من 30-08.
+//   - 🔴 get_logs_export بقى يرجّع { cap, total, truncated } جنب entries،
+//     و LOG_EXPORT_MAX بقى ثابت مسمّى بدل رقم 2000 في نص استعلام SQL.
+//     السجل فيه ١١٤٥٥+ صف update، فأي تصدير بفلتر واسع كان بيرجّع ٢٠٠٠ صف
+//     والواجهة بتقول "تم التصدير ✓" على ملف ناقص من غير أي إشارة.
+//   - 🔴 verifyCancels بقت على نمط waitForJobConfirmation: backoff متصاعد
+//     [400,700,1100,1600,2200] + سؤال job(id){ done } قبل قراءة الأوردر،
+//     وبتوقف على أول تأكيد. cancelOrder بترجّع jobId بدل ما ترميه.
+//     الانتظار كان موجود أصلاً من v3.3.0 (فالأداة ما وقعتش في باج Order-Cancel
+//     بتاع القراءة الفورية) — الناقص كان **التشخيص**: دلوقتي بيرجع
+//     { jobDone, attempts, waitedMs } في التحذير وفي extra.cancelVerify،
+//     وفشل استعلام التحقق بيتسجّل بدل ما يتبلع في catch فاضي.
+//   - ⚪ تصحيح رقم النسخة: بلوك الرأس كان مكتوب v4.3.1 والثابت VERSION مكتوب
+//     4.3.0 (فخ موثّق في CLAUDE.md، كان مؤجَّل لأول تعديل حقيقي — وده هو).
+//   - ✅ صفر تغيير في §CONTRACT::extra أو TOOL_NAME. cancelVerify مفتاح
+//     **مضاف** على الصفوف الصفرا بس؛ كل المفاتيح اللي
+//     cod-payment-center-worker بيقراها (result · courier · targetLabel ·
+//     specifier) زي ما هي بالحرف.
+//
 // v4.3.1 — توثيق العقد العابر للأدوات (31-08-2026):
 //   - 🔗 تحذير في الرأس وعند بناء `extra` بإن cod-payment-center-worker بقى
 //     بيقرا صفوف الأداة دي من D1 مباشرة (بدل Service Binding اللي اتشال).
@@ -240,7 +261,13 @@
 
 const TOOL_NAME   = 'order_status';
 const API_VERSION = '2026-01';
-const VERSION     = '4.3.0';
+const VERSION     = '4.4.0';
+
+// §CONSTANTS::logExport — سقف تصدير السجل. اسم مسمّى مش رقم في نص استعلام:
+// القيمة دي بترجع للواجهة كـ `cap` عشان الواجهة **ماتكتبهاش عندها** وتتعتّق.
+// (worker-builder v2.0.0 🔴 — «تصدير مقصوص من غير إبلاغ = علامة صح خضرا على
+// ملف ناقص». السجل هنا فيه ١١٤٥٥+ صف `update`، فالقص وارد جدًا.)
+const LOG_EXPORT_MAX = 2000;
 
 // Cairo = UTC+3 (DST active since late April 2026).
 // ⚠️ Egypt DST ends 29-10-2026 → change to 2. Treat as a stack-wide change.
@@ -696,9 +723,9 @@ async function getLogsExport(db, {
   dateTo   = null,
 } = {}) {
   const { sql: whereSql, binds } = buildLogFilterSQL({ tool, employee, status, courier, result, search, dateFrom, dateTo });
-  const sql = `SELECT * ${whereSql} ORDER BY timestamp DESC LIMIT 2000`;
+  const sql = `SELECT * ${whereSql} ORDER BY timestamp DESC LIMIT ?`;
 
-  return (await db.prepare(sql).bind(...binds).all()).results;
+  return (await db.prepare(sql).bind(...binds, LOG_EXPORT_MAX).all()).results;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -970,7 +997,10 @@ async function cancelOrder(env, token, orderGid) {
   if (!data?.data?.orderCancel?.job?.id) {
     throw new Error('orderCancel: شوبيفاي ما رجّعتش job — الإلغاء لم يبدأ فعليًا');
   }
-  return true;
+  // v4.4.0 — الـ jobId بيترجع دلوقتي بدل ما يترمي. verifyCancels بتسأل عليه
+  // (`job(id){ done }`) قبل ما تقرا الأوردر، فالجولة اللي الـ Job لسه شغال
+  // فيها ما بتستهلكش نداء قراءة على الفاضي. (worker-builder Step 5A ③)
+  return { jobId: data.data.orderCancel.job.id };
 }
 
 // ─── §SHOPIFY::cancelFulfillments ───
@@ -1099,18 +1129,56 @@ async function disposeReturns(env, token, locationId, returns) {
 // حاجتين: (١) cancelledAt اتسجّل فعلاً، (٢) فيه دليل استرجاع مخزون من
 // refundLineItems (orderCancel(restock:true) بيرجّع مخزون الأوردرات
 // المُنفَّذة فعلاً — متحقَّق على #44245 و#50781).
-// records: [{ orderId, gid, startedAt }] — بتتحدّث في مكانها بـ record.cancel.
+// records: [{ orderId, gid, startedAt, jobId }] — بتتحدّث في مكانها بـ record.cancel.
+//
+// v4.4.0 (worker-builder v2.0.0 🔴 · Step 5A ③) — الانتظار بقى **مشروط ومتصاعد**
+// وبيسأل الـ Job نفسه قبل ما يقرا الأوردر:
+//   • VERIFY_DELAYS_MS متصاعدة، والحلقة بتوقف على أول تأكيد — مش نوم ثابت.
+//   • isJobDone بترجّع true/false/null. **null ≠ false**: null معناها "معرفناش،
+//     كمّل واقرا المورد"، و false معناها "الـ Job لسه شغال، ماتضيّعش نداء قراءة".
+//     خلط الاتنين بيرجّعنا لنفس عيلة الباج.
+//   • النتيجة بترجّع { jobDone, attempts, waitedMs } عشان الحالة الصفرا تبقى
+//     **قابلة للتشخيص** بعدين، بدل ما تكون مجرد "مش عارفين" — دي كانت الفجوة
+//     الفعلية في v3.3.0: الانتظار كان موجود، والتشخيص لأ.
+const VERIFY_DELAYS_MS = [400, 700, 1100, 1600, 2200];   // ≈٦ ثوانٍ بحد أقصى
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// true = خلص · false = لسه شغال · null = معرفناش (فشل الاستعلام نفسه)
+async function isJobDone(env, token, jobId) {
+  try {
+    const data = await shopifyGQL(env, token,
+      `query JobStatus($id: ID!) { job(id: $id) { id done } }`, { id: jobId }, 'jobStatus');
+    const done = data?.data?.job?.done;
+    return typeof done === 'boolean' ? done : null;
+  } catch { return null; }
+}
+
 async function verifyCancels(env, token, records) {
   if (!records.length) return;
-  const DELAYS = [1200, 2000, 3000];
+  let waitedMs = 0, attempts = 0;
 
-  for (const delay of DELAYS) {
+  for (const delay of VERIFY_DELAYS_MS) {
     const left = records.filter(r => !r.cancel?.verified);
-    if (!left.length) return;
-    await new Promise(r => setTimeout(r, delay));
+    if (!left.length) break;   // ⚠️ break مش return — بند التشخيص تحت لازم يتنفّذ
+    await sleep(delay);
+    waitedMs += delay; attempts++;
 
-    for (let i = 0; i < left.length; i += 20) {
-      const chunk = left.slice(i, i + 20);
+    // ① اسأل الـ Job الأول — الأوردرات اللي Job بتاعها لسه شغال بتتأجل للجولة
+    //    الجاية من غير ما تستهلك نداء قراءة على الفاضي. null (معرفناش) بتكمّل.
+    const ready = [];
+    for (const r of left) {
+      if (r.jobId && r.cancel?.jobDone !== true) {
+        const done = await isJobDone(env, token, r.jobId);
+        r.cancel = { ...(r.cancel || {}), jobDone: done };
+        if (done === false) continue;
+      }
+      ready.push(r);
+    }
+    if (!ready.length) continue;
+
+    for (let i = 0; i < ready.length; i += 20) {
+      const chunk = ready.slice(i, i + 20);
       let data;
       try {
         data = await shopifyGQL(env, token, `
@@ -1126,8 +1194,11 @@ async function verifyCancels(env, token, records) {
             }
           }
         `, { ids: chunk.map(r => r.gid) }, 'verifyCancel');
-      } catch {
-        continue; // نحاول تاني في الجولة الجاية (delay التالي) — لو خلصت الجولات يفضل verified:false
+      } catch (e) {
+        // نحاول تاني في الجولة الجاية (delay التالي). السبب بيتسجّل بدل ما
+        // يتبلع — لو خلصت الجولات، الصف الأصفر بيقول **ليه** ما اتأكدش.
+        for (const r of chunk) r.cancel = { ...(r.cancel || {}), verifyError: e.message };
+        continue;
       }
 
       const byGid = {};
@@ -1141,9 +1212,20 @@ async function verifyCancels(env, token, records) {
           .flatMap(rf => rf.refundLineItems?.nodes || [])
           .filter(li => li.restockType && li.restockType !== 'NO_RESTOCK')
           .reduce((s, li) => s + (li.quantity || 0), 0);
-        r.cancel = { verified: !!node.cancelledAt, restockedUnits };
+        r.cancel = {
+          ...(r.cancel || {}),
+          verified: !!node.cancelledAt,
+          restockedUnits,
+          verifyError: null,
+        };
       }
     }
+  }
+
+  // انتهت المهلة من غير تأكيد لبعض الصفوف — دي **"ما قدرناش نتأكد"** (warning)،
+  // مش "تم" ومش "فشل". الأرقام بترجع للواجهة وبتتسجّل في extra.result.
+  for (const r of records) {
+    r.cancel = { verified: false, restockedUnits: 0, jobDone: null, ...(r.cancel || {}), attempts, waitedMs };
   }
 }
 
@@ -1270,10 +1352,10 @@ async function applyDirect(env, token, order, specifier, courier, reason, action
   // Cancelled / Returned (S1): cancel the order BEFORE writing the metafield.
   // startedAt بيتسجّل عشان verifyCancels تستخدمه بعد كده (عطل C) — orderCancel
   // بترجّع job غير متزامن، فمفيش تأكيد فوري إن الإلغاء اتنفذ فعلاً.
-  let cancelStartedAt = null;
+  let cancelStartedAt = null, cancelJobId = null;
   if (specifier === 'Cancelled' || specifier === 'Returned') {
     cancelStartedAt = new Date().toISOString();
-    await cancelOrder(env, token, order.gid);
+    ({ jobId: cancelJobId } = await cancelOrder(env, token, order.gid));
     actions.push('orderCancel');
   }
 
@@ -1328,7 +1410,7 @@ async function applyDirect(env, token, order, specifier, courier, reason, action
 
   // v4.3.0 — effectiveReason/reasonSource بيرجعوا عشان صف D1 يسجّل السبب
   // الحقيقي للأوردر ومصدره، حتى لو موظف العمليات ما اختارش حاجة بنفسه.
-  return { warnings, cancelStartedAt, effectiveReason, reasonSource };
+  return { warnings, cancelStartedAt, cancelJobId, effectiveReason, reasonSource };
 }
 
 // ─── §STATUS::runCourierSearch ───
@@ -1766,7 +1848,7 @@ export default {
             // اللي اتكتب فعلاً على شوبيفاي، مش أي قيمة جت من الواجهة بالخطأ.
             if (specifier !== 'Cancelled' && specifier !== 'Returned') row.reason = null;
 
-            const { warnings, cancelStartedAt, effectiveReason, reasonSource } =
+            const { warnings, cancelStartedAt, cancelJobId, effectiveReason, reasonSource } =
               await applyDirect(env, token, order, specifier, courier, row.reason, row.actions);
             row.warnings = warnings;
             row.status   = warnings.length ? 'warning' : 'success';
@@ -1776,7 +1858,7 @@ export default {
             row.reasonSource = reasonSource;
 
             if (cancelStartedAt) {
-              cancelRecords.push({ orderId: id, gid: order.gid, startedAt: cancelStartedAt, specifier, row });
+              cancelRecords.push({ orderId: id, gid: order.gid, startedAt: cancelStartedAt, jobId: cancelJobId, specifier, row });
             }
           } catch (e) {
             row.status = 'error';
@@ -1796,7 +1878,17 @@ export default {
             if (rec.row.status !== 'success' && rec.row.status !== 'warning') continue; // صف فشل أصلاً — سيبه زي ما هو
             if (!rec.cancel?.verified) {
               rec.row.status = 'warning';
-              rec.row.warnings.push('لسه ما اتأكدش إن إلغاء الأوردر على شوبيفاي نجح فعلاً — راجعه يدويًا');
+              // v4.4.0 — التحذير بيقول **إيه اللي حصل** مش بس "ما اتأكدش":
+              // الـ Job خلص ولا لأ، وقعدنا مستنيين قد إيه، وفشل الاستعلام إن وُجد.
+              const c = rec.cancel || {};
+              const jobTxt = c.jobDone === true ? 'الـ Job خلص' :
+                             c.jobDone === false ? 'الـ Job لسه شغال' : 'حالة الـ Job غير معروفة';
+              rec.row.warnings.push(
+                `لسه ما اتأكدش إن إلغاء الأوردر على شوبيفاي نجح فعلاً — راجعه يدويًا ` +
+                `(${jobTxt} · استنينا ${((c.waitedMs || 0) / 1000).toFixed(1)}ث على ${c.attempts || 0} محاولات` +
+                `${c.verifyError ? ` · فشل التحقق: ${c.verifyError}` : ''})`
+              );
+              rec.row.cancelVerify = { jobDone: c.jobDone ?? null, attempts: c.attempts || 0, waitedMs: c.waitedMs || 0 };
             } else if (rec.specifier === 'Returned' && !rec.cancel.restockedUnits) {
               rec.row.status = 'warning';
               rec.row.warnings.push('الإلغاء اتأكد لكن لسه مفيش دليل استرجاع مخزون — راجع الأوردر يدويًا');
@@ -1853,6 +1945,11 @@ export default {
                 // الأداة · 'existing' = كان مسجّل على شوبيفاي (خدمة العملاء)
                 // والأداة ما كتبتش فوقه · null = مفيش سبب على الأوردر ده.
                 reasonSource: row.reasonSource || null,
+                // v4.4.0 — تشخيص انتظار الـ Job لما الإلغاء ما اتأكدش. بيتكتب
+                // بس على الصفوف اللي فعلاً وقعت في الحالة دي (مفتاح جديد
+                // **مضاف**، مفيش مفتاح قديم اتغيّر — العقد مع
+                // cod-payment-center-worker سليم بالكامل).
+                ...(row.cancelVerify ? { cancelVerify: row.cancelVerify } : {}),
               },
             });
           } catch (e) {
@@ -1956,10 +2053,20 @@ export default {
         const search   = url.searchParams.get('search')   || null;
         const dateFrom = url.searchParams.get('dateFrom')  || null;
         const dateTo   = url.searchParams.get('dateTo')    || null;
-        const entries  = await getLogsExport(env.DB, {
-          tool: TOOL_NAME, employee, status, courier, result, search, dateFrom, dateTo,
-        });
-        return json({ ok: true, entries }, 200, request);
+        // ⚠️ العدّ بيتنادى **بالتوازي وبنفس الفلاتر بالظبط** — من غيره الواجهة
+        // مش هتعرف إن الملف اتقص وهتقول "تم التصدير ✓" على ملف ناقص.
+        // (worker-builder v2.0.0 🔴 · html-builder Standards #30)
+        const filters  = { tool: TOOL_NAME, employee, status, courier, result, search, dateFrom, dateTo };
+        const [entries, total] = await Promise.all([
+          getLogsExport(env.DB, filters),
+          getLogsCount(env.DB, filters),
+        ]);
+        return json({
+          ok: true, entries,
+          cap: LOG_EXPORT_MAX,
+          total,
+          truncated: total > LOG_EXPORT_MAX,
+        }, 200, request);
       }
 
       return json({ ok: false, error: `action غير معروف: ${action}` }, 404, request);
