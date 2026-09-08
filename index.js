@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // Order Status Updater — Worker  v4.4.0
-// skills: worker-builder v2.1.0 · constants v1.4.0 · order-lifecycle v1.2.0 — 06-09-2026
+// skills: worker-builder v2.1.0 · constants v1.4.0 · order-lifecycle v1.3.0 — 08-09-2026
 // Account : ecommoda-dev   |   D1: ecommoda-dev-logs (binding: DB)
 // ---------------------------------------------------------------------------
 // 🔗🔗 قارئ خارجي لسجل الأداة دي — اقرا قبل أي تعديل على شكل `extra`
@@ -21,6 +21,62 @@
 // أو في TOOL_NAME: افتح §TODAY-IMPORT في cod-payment-center-worker وعدّله
 // معاه في نفس التسليم. الأداتين على نفس قاعدة D1 (ecommoda-dev-logs).
 // ---------------------------------------------------------------------------
+// v4.5.0 — مراجعة عميقة شاملة (08-09-2026) — راجع order-status-updater-review.md:
+//   ٢٢ بند اتقفلوا في تسليم واحد. كل بند 🔴 هنا كان **مثبت بدليل من الإنتاج**
+//   (استعلامات D1 على ١٢٬١٤٨ صف + حالة أوردرات حقيقية على شوبيفاي)، مش نظري.
+//
+//   🔴 كاسر:
+//   - In-Return بقت مصدر انتقال شرعي في الماكينتين. كانت ناقصة خالص، فكل أوردر
+//     بوسطة بيوصل In-Return كان **مقفول نهائيًا** في الأداة: "انتقال غير مسموح"،
+//     و disposeReturns عمره ما بيشتغل، فالمخزون مايرجعش. ٤ أوردرات كانت معلّقة
+//     وقت المراجعة (#52457 · #52704 · #53027 · #53517) كلها Other_Regions،
+//     أقدمها من ٢٨-٠٨. الانتقالات المضافة (قرار أحمد 08-09-2026):
+//       S1: In-Return → Returned          (جدول state-machines §1.4)
+//       S2: In-Return → Returned          (جدول state-machines §2.2)
+//       S2: In-Return → Ready   🆕 قرار جديد — الأوردر بيرجع للمكتب ويطلع
+//           في دورة تسليم جديدة. مش في المهارة لسه، متسجّل في skills-updates.md
+//     ⚠️ S1: In-Return → Ready **ما اتضافش** — مش في الجدول المعتمد ولا اتقرر.
+//   - السبب بيتفحص ضد قايمة الاختيارات الحية **قبل** أي فعل لا رجعة فيه.
+//     #52732 (03-09): orderCancel نجحت، وبعدها metafieldsSet اترفضت لأن السبب
+//     المختار ("لا يوجد سبب") كان اتشال من تعريف الميتافيلد — فالأوردر فضل
+//     ملغي على شوبيفاي و S1 = "Ready"، واتصلّح **باليد** بعدها بـ٢١ ثانية،
+//     والسبب الإلزامي ضاع. دلوقتي الفحص بيرمي قبل cancelOrder فمفيش إلغاء أصلاً.
+//   - cancelOrder بقت idempotent: أوردر ملغي على شوبيفاي أصلاً بتتكتب حالته
+//     من غير نداء إلغاء تاني (warning). قبل كده إعادة المحاولة كانت **مستحيلة**
+//     — cancelOrder بترفض على أوردر ملغي، فالصف يفضل أحمر للأبد.
+//   - حارس WORKER_SECRET الغايب: من غيره المقارنة بتبقى مع السلسلة الحرفية
+//     "Bearer undefined" — يعني سر ناقص = **الحماية اتشالت** مش "كل حاجة 401".
+//
+//   🟠 خطر عالي:
+//   - فشل أي فعل **بعد** كتابة الحالة بقى warning مش error (Step 5A ④).
+//     cancelFulfillments · createFulfillment · disposeReturns كانوا بيرموا،
+//     فالصف يتقال عليه "فشل" والحالة متكتبة فعلاً — وإعادة المحاولة بترجع
+//     "انتقال غير مسموح" لأن S1/S2 اتحركوا. حصل مرتين على الأقل في السجل
+//     (reverseDispose 18-08 · fulfillmentCreate 14-08). deleteMetafields كانت
+//     الوحيدة المتعاملة صح — دلوقتي الأربعة بنفس النمط.
+//   - سقف صريح على عدد الـ IDs في كل endpoint بياخد orderIds (MAX_ORDER_IDS).
+//   - fetchOrderStates بقت مقسّمة: ٥ أوردرات للنداء لما بلوك المرتجعات مطلوب
+//     (~١٠٨ نقطة/أوردر → دفعة ٢٠ كانت ≈٢١٦٠ نقطة، فوق سقف الاستعلام الواحد).
+//   - ⏰ توقيت القاهرة بقى **محسوب** بـ Intl/Africa/Cairo مش ثابت مكتوب باليد.
+//     CAIRO_OFFSET_HOURS اتشال. التوقيت الصيفي بيخلص 29-10-2026 وكان هيبوّظ كل
+//     وقت معروض وكل فلتر تاريخ و **يكتب pickup_date غلط** لأي شحنة بين
+//     ٢٣:٠٠ و٠٠:٠٠ — من غير ما يتغيّر سطر واحد في الكود.
+//
+//   🔵 تصليب:
+//   - GraphQL variables بدل التضفير النصي في كل استعلام بياخد إدخال من العميل.
+//   - LIKE بـ ESCAPE، وحارس NaN على limit/offset، و opName لكل نداء.
+//   - createFulfillment بترجّع id الـ fulfillment من الرد مش عدد المدخلات،
+//     وبتفحص الـ status كمان.
+//   - get_logs بترجّع batchSizes — الواجهة بتكشف بيها الدفعة المقسومة على
+//     صفحتين (كانت بتتعرض كمجموعتين بعدادات ناقصة من غير أي إشارة).
+//   - search_courier_orders بترجّع cap — الواجهة ماتكتبش "1000" عندها.
+//   - diag بقى بيرجّع checks كمصفوفة [{ok,label,detail}] (worker-builder v2.1.0)
+//     **مع الإبقاء على المفاتيح القديمة** فترة انتقالية عشان أي واجهة متكاشة
+//     ما تكسرش. ده "أول تعديل مقصود" اللي CLAUDE.md كان مستنيه.
+//   - ✅ صفر تغيير في §CONTRACT::extra أو TOOL_NAME — العقد مع
+//     cod-payment-center-worker سليم بالكامل (result · courier · targetLabel ·
+//     specifier زي ما هم بالحرف). §TODAY-IMPORT ما اتلمسش.
+//
 // v4.4.0 — مطابقة worker-builder v2.1.0 (06-09-2026):
 //   البندان الكاسران في worker-builder v2.0.0 كانوا لسه مفتوحين هنا — البصمة
 //   كانت v1.1.0، يعني الأداة ما اتراجعتش على المهارة من 30-08.
@@ -261,7 +317,7 @@
 
 const TOOL_NAME   = 'order_status';
 const API_VERSION = '2026-01';
-const VERSION     = '4.4.0';
+const VERSION     = '4.5.0';
 
 // §CONSTANTS::logExport — سقف تصدير السجل. اسم مسمّى مش رقم في نص استعلام:
 // القيمة دي بترجع للواجهة كـ `cap` عشان الواجهة **ماتكتبهاش عندها** وتتعتّق.
@@ -269,9 +325,19 @@ const VERSION     = '4.4.0';
 // ملف ناقص». السجل هنا فيه ١١٤٥٥+ صف `update`، فالقص وارد جدًا.)
 const LOG_EXPORT_MAX = 2000;
 
-// Cairo = UTC+3 (DST active since late April 2026).
-// ⚠️ Egypt DST ends 29-10-2026 → change to 2. Treat as a stack-wide change.
-const CAIRO_OFFSET_HOURS = 3;
+// §CONSTANTS::limits — v4.5.0
+// سقف صريح على عدد الـ IDs في أي نداء واحد. الواجهة بتقسّم عندها كمان، لكن
+// الحارس هنا هو اللي بيمنع نداء `nodes(ids:)` عملاق يفشل ويرجّع الدفعة كلها
+// فاضية (سيناريو "تحديد الكل" في بحث المندوب — بيرجّع لحد ٢٠٠٠ أوردر).
+const MAX_ORDER_IDS = 50;
+
+// §CONSTANTS::statesChunk — v4.5.0
+// بلوك المرتجعات (returns/reverseFulfillmentOrders/dispositions) تكلفته
+// ~١٠٨ نقطة للأوردر الواحد. دفعة ٢٠ في نداء واحد ≈ ٢١٦٠ نقطة — فوق سقف تكلفة
+// الاستعلام الواحد عند شوبيفاي، فالنداء بيترفض والدفعة كلها بتفشل. التقسيم
+// هنا هو الحارس؛ ومن غيره الفشل بيظهر كخطأ GraphQL مبهم على دفعة كاملة.
+const STATES_CHUNK          = 50;   // بدون بلوك المرتجعات
+const STATES_CHUNK_RETURNS  = 5;    // مع بلوك المرتجعات
 
 // §CONSTANTS::metafields
 const MF = {
@@ -364,13 +430,21 @@ const TRANSITION_RULES = {
     s1From: [S1_STATUS.READY],
     s2Blank: true,
   },
+  // v4.5.0 🔓 — In-Return اتضافت كمصدر شرعي. كانت ناقصة خالص، فكل أوردر بوسطة
+  // بيوصل In-Return كان مقفول نهائيًا في الأداة (٤ أوردرات معلّقة وقت المراجعة).
+  // جدول state-machines §1.4 بيقول `In-Return → Returned`، و Rule 12 بتقول
+  // In-Return تتعامل زي Shipped في **الماكينتين**.
+  // ⚠️ S1: In-Return → Ready **مش** مضافة عمدًا — مش في الجدول المعتمد ولا اتقررت.
   Returned: {
-    s1From: [S1_STATUS.SHIPPED],
+    s1From: [S1_STATUS.SHIPPED, S1_STATUS.IN_RETURN],
     s2Blank: true,
   },
+  // v4.5.0 🆕 — S2: In-Return → Ready قرار أحمد (08-09-2026): القطعة بترجع
+  // للمكتب وممكن تطلع في دورة تسليم جديدة، أو العميل يلغي أصلاً. القرار ده
+  // **لسه مش في المهارة** — متسجّل في skills-updates-2026-09-08.md.
   Ready_S2: {
     s1From: [S1_STATUS.SHIPPED, S1_STATUS.DELIVERED],
-    s2In:   [S2_STATUS.CONFIRMED_RETURN, S2_STATUS.CONFIRMED_EXCHANGE, S2_STATUS.SHIPPED],
+    s2In:   [S2_STATUS.CONFIRMED_RETURN, S2_STATUS.CONFIRMED_EXCHANGE, S2_STATUS.SHIPPED, S2_STATUS.IN_RETURN],
   },
   Shipped_S2: {
     s1From: [S1_STATUS.DELIVERED],
@@ -378,7 +452,7 @@ const TRANSITION_RULES = {
   },
   Returned_S2: {
     s1From: [S1_STATUS.DELIVERED],
-    s2In:   [S2_STATUS.SHIPPED],
+    s2In:   [S2_STATUS.SHIPPED, S2_STATUS.IN_RETURN],
   },
 };
 
@@ -391,11 +465,13 @@ const TRANSITION_SOURCES = {
   'S1:Shipped':   { s1Sources: [S1_STATUS.READY] },
   'S1:Delivered': { s1Sources: [S1_STATUS.SHIPPED] },
   'S1:Cancelled': { s1Sources: [S1_STATUS.READY] },   // v3.6.0 🔒 — Shipped اتشالت
-  'S1:Returned':  { s1Sources: [S1_STATUS.SHIPPED] },
+  // v4.5.0 — لازم تفضل مطابقة لـ TRANSITION_RULES فوق، وإلا البحث بيرجّع
+  // أوردرات الأداة بترفضها (أو بيخفي أوردرات مسموح بيها) من غير أي رسالة.
+  'S1:Returned':  { s1Sources: [S1_STATUS.SHIPPED, S1_STATUS.IN_RETURN] },
   'S2:Ready':     { s1Constraint: [S1_STATUS.SHIPPED, S1_STATUS.DELIVERED],
-                    s2Sources: [S2_STATUS.CONFIRMED_RETURN, S2_STATUS.CONFIRMED_EXCHANGE, S2_STATUS.SHIPPED] },
+                    s2Sources: [S2_STATUS.CONFIRMED_RETURN, S2_STATUS.CONFIRMED_EXCHANGE, S2_STATUS.SHIPPED, S2_STATUS.IN_RETURN] },
   'S2:Shipped':   { s1Constraint: [S1_STATUS.DELIVERED], s2Sources: [S2_STATUS.READY] },
-  'S2:Returned':  { s1Constraint: [S1_STATUS.DELIVERED], s2Sources: [S2_STATUS.SHIPPED] },
+  'S2:Returned':  { s1Constraint: [S1_STATUS.DELIVERED], s2Sources: [S2_STATUS.SHIPPED, S2_STATUS.IN_RETURN] },
 };
 
 const SEARCH_MAX_PAGES = 10;   // 10 × 100 = 1000 orders ceiling، لكل استعلام فرعي (S1 أو S2)
@@ -462,19 +538,57 @@ function requireLocationId(env) {
   }
 }
 
-// §HELPERS::toCairo — display timestamp, UTC+3
+// ─── §HELPERS::cairoTime — v4.5.0 ⏰ ───
+// الإزاحة **بتتحسب** من قاعدة بيانات المناطق الزمنية، مش مكتوبة ثابت.
+// الثابت القديم (CAIRO_OFFSET_HOURS = 3) كان صح لحد 29-10-2026 وبعدها بيغلط
+// بساعة **من غير ما يتغيّر سطر واحد في الكود** — وقتها كان هيبوّظ:
+//   • كل وقت معروض في تاب السجل   • حدود فلتر التاريخ (cairoDayBoundsUTC)
+//   • و **الأخطر**: cairoDate() بتكتب custom.pickup_date على الأوردر، فأي
+//     شحنة بين ٢٣:٠٠ و٠٠:٠٠ بتوقيت القاهرة كانت هتتسجّل بتاريخ اليوم اللي بعده.
+// Workers ومتصفحات الموظفين الاتنين بيدعموا Intl بالمناطق الزمنية الكاملة.
+const CAIRO_TZ = 'Africa/Cairo';
+const _cairoFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: CAIRO_TZ, hourCycle: 'h23',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+
+// { year, month, day, hour, minute, second } — كلها سلاسل مبطّنة بأصفار
+function cairoParts(d) {
+  const o = {};
+  for (const p of _cairoFmt.formatToParts(d)) if (p.type !== 'literal') o[p.type] = p.value;
+  if (o.hour === '24') o.hour = '00';   // حارس: بعض المحركات بترجّع 24 لمنتصف الليل
+  return o;
+}
+
+// إزاحة القاهرة عن UTC بالدقايق في اللحظة دي (١٨٠ صيفًا · ١٢٠ شتاءً)
+function cairoOffsetMinutes(d) {
+  const p = cairoParts(d);
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return Math.round((asUTC - d.getTime()) / 60000);
+}
+
+// §HELPERS::toCairo — display timestamp (DD-MM-YYYY HH:MM بتوقيت القاهرة)
 function toCairo(iso) {
-  const d = new Date(new Date(iso).getTime() + CAIRO_OFFSET_HOURS * 3600 * 1000);
-  const p = n => String(n).padStart(2, '0');
-  return `${p(d.getUTCDate())}-${p(d.getUTCMonth() + 1)}-${d.getUTCFullYear()} ` +
-         `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  const p = cairoParts(d);
+  return `${p.day}-${p.month}-${p.year} ${p.hour}:${p.minute}`;
 }
 
 // §HELPERS::cairoDate — YYYY-MM-DD in Cairo, for the pickup_date metafield
 function cairoDate() {
-  const d = new Date(Date.now() + CAIRO_OFFSET_HOURS * 3600 * 1000);
-  const p = n => String(n).padStart(2, '0');
-  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
+  const p = cairoParts(new Date());
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+// §HELPERS::intParam — v4.5.0
+// parseInt على قيمة مش رقم بيرجّع NaN، و Math.min/Math.max بيمرّروه زي ما هو.
+// NaN في LIMIT/OFFSET = خطأ D1 خام بدل قيمة افتراضية.
+function intParam(raw, dflt, min, max) {
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n)) return dflt;
+  return Math.min(Math.max(n, min), max);
 }
 
 const gid       = id => `gid://shopify/Order/${id}`;
@@ -575,10 +689,15 @@ function parseListParam(v) {
 }
 
 // Cairo calendar day (YYYY-MM-DD) → UTC ISO bounds for that day
+// v4.5.0 — الإزاحة بتتقاس عند ظهر اليوم ده بالظبط (مش ثابت). الظهر مقصود:
+// أي تحويل توقيت صيفي بيحصل فجرًا، فقياس الإزاحة من الظهر بيدّي إزاحة اليوم
+// الصحيحة. يوم التحويل نفسه ممكن يزيد/ينقص ساعة على الحد — فرق مقبول جدًا
+// مقارنة بثابت بيغلط **كل يوم** لنص السنة.
 function cairoDayBoundsUTC(dateStr) {
-  const startUTCms = new Date(`${dateStr}T00:00:00.000Z`).getTime() - CAIRO_OFFSET_HOURS * 3600 * 1000;
-  const endUTCms   = new Date(`${dateStr}T23:59:59.999Z`).getTime() - CAIRO_OFFSET_HOURS * 3600 * 1000;
-  return { start: new Date(startUTCms).toISOString(), end: new Date(endUTCms).toISOString() };
+  const offMin = cairoOffsetMinutes(new Date(`${dateStr}T12:00:00.000Z`));
+  const start  = Date.parse(`${dateStr}T00:00:00.000Z`) - offMin * 60000;
+  const end    = Date.parse(`${dateStr}T23:59:59.999Z`) - offMin * 60000;
+  return { start: new Date(start).toISOString(), end: new Date(end).toISOString() };
 }
 
 // §SHARED::logFilters::status — بند 6 (v3.2.0، 16-08-2026): fallback لسجلات
@@ -626,8 +745,11 @@ function buildLogFilterSQL({ tool = null, employee = null, status = null, courie
   }
 
   if (search) {
-    sql += ' AND (order_name LIKE ? OR notes LIKE ?)';
-    b.push(`%${search}%`, `%${search}%`);
+    // v4.5.0 — `%` و`_` محارف بدل في LIKE. من غير ESCAPE، بحث بـ `_` بيرجّع
+    // نتايج عشوائية والموظف مش هيعرف إن بحثه اتفسّر غلط.
+    const esc = String(search).replace(/[\\%_]/g, c => '\\' + c);
+    sql += " AND (order_name LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\')";
+    b.push(`%${esc}%`, `%${esc}%`);
   }
 
   if (dateFrom) {
@@ -693,6 +815,35 @@ async function getLogs(db, {
   b.push(Math.min(limit, 100), offset);
 
   return (await db.prepare(sql).bind(...b).all()).results;
+}
+
+// ─── §SHARED::batchSizes — v4.5.0 ───
+// الصفحة ١٠٠ صف، والدفعة ممكن توقع على الحد فتتعرض **مجموعتين في صفحتين**
+// بعدادات ✓/⚠/✗ مقسومة، وزرار الطباعة يطبع نصها — كله من غير أي إشارة.
+// بنرجّع العدد الكامل لكل batchId ظاهر في الصفحة عشان الواجهة تقارن وتوسم.
+// النافذة الزمنية (±ساعة حوالين صفوف الصفحة) بتحدّ الفحص: صفوف الدفعة الواحدة
+// بتتكتب في نفس النداء يعني في حدود ثواني، فساعة هامش آمنة جدًا.
+async function getBatchSizes(db, tool, entries) {
+  const ids = [...new Set(entries.map(e => {
+    try { return JSON.parse(e.extra || '{}').batchId || null; } catch { return null; }
+  }).filter(Boolean))];
+  if (!ids.length) return {};
+
+  const stamps = entries.map(e => e.timestamp).filter(Boolean).sort();
+  if (!stamps.length) return {};   // مفيش طوابع زمنية → مفيش نافذة نبحث فيها
+  const lo = new Date(Date.parse(stamps[0]) - 3600000).toISOString();
+  const hi = new Date(Date.parse(stamps[stamps.length - 1]) + 3600000).toISOString();
+
+  const ph = ids.map(() => '?').join(',');
+  const rows = await db.prepare(
+    `SELECT json_extract(extra, '$.batchId') AS b, COUNT(*) AS n FROM logs
+      WHERE tool = ? AND timestamp >= ? AND timestamp <= ?
+        AND json_extract(extra, '$.batchId') IN (${ph}) GROUP BY b`
+  ).bind(tool, lo, hi, ...ids).all();
+
+  const out = {};
+  for (const r of (rows.results || [])) if (r.b) out[r.b] = r.n;
+  return out;
 }
 
 async function getLogsCount(db, {
@@ -822,10 +973,10 @@ async function shopifyGQL(env, token, query, variables = {}, opName = 'shopify')
 
 // ─── §SHOPIFY::resolveOrderNames ───
 async function resolveOrderNames(env, token, orderIds) {
-  const gids = orderIds.map(gid);
+  // v4.5.0 — GraphQL variables بدل تضفير الـ IDs في نص الاستعلام
   const data = await shopifyGQL(env, token, `
-    { nodes(ids: ${JSON.stringify(gids)}) { ... on Order { id name } } }
-  `, {}, 'resolveOrderNames');
+    query OrderNames($ids: [ID!]!) { nodes(ids: $ids) { ... on Order { id name } } }
+  `, { ids: orderIds.map(gid) }, 'resolveOrderNames');
   const map = {};
   for (const n of (data?.data?.nodes || [])) {
     if (n?.id && n?.name) map[numericId(n.id)] = n.name;
@@ -836,9 +987,11 @@ async function resolveOrderNames(env, token, orderIds) {
 // ─── §SHOPIFY::resolveOrderByName ───
 async function resolveOrderByName(env, token, orderName) {
   const normalized = orderName.startsWith('#') ? orderName : `#${orderName}`;
+  // v4.5.0 — اسم الأوردر جاي من العميل. تضفيره في نص الاستعلام كان بيكسر
+  // المستند على أي `"` أو `\` ويرجّع خطأ GraphQL مبهم بدل "غير موجود".
   const data = await shopifyGQL(env, token, `
-    { orders(first: 1, query: "name:${normalized}") { edges { node { id name } } } }
-  `, {}, 'resolveOrderByName');
+    query FindOrder($q: String!) { orders(first: 1, query: $q) { edges { node { id name } } } }
+  `, { q: `name:${normalized}` }, 'resolveOrderByName');
   const node = data?.data?.orders?.edges?.[0]?.node;
   if (!node) return null;
   return { orderId: numericId(node.id), orderName: node.name };
@@ -849,7 +1002,18 @@ async function resolveOrderByName(env, token, orderName) {
 // ~108 request points/order) — requested whenever the batch's targetLabel is
 // "Returned" (we don't yet know per-order whether it'll resolve to S1 or S2,
 // so the block is fetched defensively for the whole batch; harmless if unused).
+// v4.5.0 — التقسيم إلزامي: بلوك المرتجعات ~١٠٨ نقطة/أوردر، ودفعة ٢٠ في نداء
+// واحد بتعدّي سقف تكلفة الاستعلام الواحد فترجّع الدفعة كلها فاشلة.
 async function fetchOrderStates(env, token, orderIds, withReturns = false) {
+  const size = withReturns ? STATES_CHUNK_RETURNS : STATES_CHUNK;
+  const out = {};
+  for (let i = 0; i < orderIds.length; i += size) {
+    Object.assign(out, await fetchOrderStatesChunk(env, token, orderIds.slice(i, i + size), withReturns));
+  }
+  return out;
+}
+
+async function fetchOrderStatesChunk(env, token, orderIds, withReturns = false) {
   // dispositions{quantity} أُضيفت v3.3.0 (عطل A) — لازمة عشان disposeReturns
   // تحسب الكمية المتبقية الفعلية بدل ما تفترض إن totalQuantity كله لسه محتاج
   // استرجاع (الـ RFO بيفضل OPEN حتى بعد الاسترجاع الكامل).
@@ -875,7 +1039,7 @@ async function fetchOrderStates(env, token, orderIds, withReturns = false) {
       }` : '';
 
   const data = await shopifyGQL(env, token, `
-    { nodes(ids: ${JSON.stringify(orderIds.map(gid))}) {
+    query OrderStates($ids: [ID!]!) { nodes(ids: $ids) {
         ... on Order {
           id
           name
@@ -891,7 +1055,7 @@ async function fetchOrderStates(env, token, orderIds, withReturns = false) {
           ${returnsBlock}
         }
       } }
-  `, {}, 'fetchOrderStates');
+  `, { ids: orderIds.map(gid) }, 'fetchOrderStates');
 
   const out = {};
   for (const n of (data?.data?.nodes || [])) {
@@ -1034,8 +1198,14 @@ async function cancelFulfillments(env, token, fulfillments) {
 // deprecated fulfillmentCreateV2).
 // v3.7.0 (Step 5A ③) — بترجّع 0 لو الرد ما فيهوش fulfillment مؤكَّد، مش عدد
 // الـ fulfillment orders اللي طلبناها.
+// v4.5.0 — بقت ترجّع **معرّف الـ fulfillment اللي شوبيفاي أنشأته فعلاً** بدل
+// عدد المدخلات (Step 5A ②: العدّ من الرد مش من المدخلات)، وبتفحص الـ status
+// كمان — `CANCELLED`/`ERROR`/`FAILURE` كانوا بيعدّوا نجاح لأن الـ payload
+// موجود والـ userErrors فاضية.
+const FULFILLMENT_BAD_STATUS = ['CANCELLED', 'ERROR', 'FAILURE'];
+
 async function createFulfillment(env, token, openFulfillmentOrders) {
-  if (!openFulfillmentOrders.length) return 0;
+  if (!openFulfillmentOrders.length) return null;
 
   const data = await shopifyGQL(env, token, `
     mutation FulfillmentCreate($fulfillment: FulfillmentInput!) {
@@ -1053,10 +1223,16 @@ async function createFulfillment(env, token, openFulfillmentOrders) {
 
   const errs = data?.data?.fulfillmentCreate?.userErrors || [];
   if (errs.length) throw new Error('fulfillmentCreate: ' + errs.map(e => e.message).join(' | '));
-  if (!data?.data?.fulfillmentCreate?.fulfillment) {
+  const f = data?.data?.fulfillmentCreate?.fulfillment;
+  if (!f?.id) {
     throw new Error('fulfillmentCreate: شوبيفاي ما أكدتش التنفيذ — fulfillment فاضي في الرد');
   }
-  return openFulfillmentOrders.length;
+  if (FULFILLMENT_BAD_STATUS.includes(f.status)) {
+    throw new Error(`fulfillmentCreate: شوبيفاي رجّعت fulfillment بحالة ${f.status} — التنفيذ ما تمّش`);
+  }
+  // numericId مخصصة لـ gid الأوردر — الـ fulfillment gid شكله تاني، فبناخد
+  // آخر جزء من المسار بدل ما نرجّع الـ gid كامل في نص الـ action.
+  return { id: String(f.id).split('/').pop(), status: f.status };
 }
 
 // ─── §SHOPIFY::disposeReturns — v3.3.0 (عطل A + D) ───
@@ -1271,7 +1447,7 @@ function isTransitionValid(specifier, currentS1, currentS2) {
 // لو رمينا استثناء في النص، اللي اتنفّذ فعلاً بيفضل مسجَّل في actions بدل ما
 // يختفي (مثال حقيقي #50243: setMetafields نجحت وقطعة رجعت للمخزن، والمرتجع
 // التاني فشل — قبل الإصلاح ده كان بيتسجل "actions: []" رغم كده).
-async function applyDirect(env, token, order, specifier, courier, reason, actions) {
+async function applyDirect(env, token, order, specifier, courier, reason, actions, reasonChoices = null) {
   const spec     = SPECIFIERS[specifier];
   const warnings = [];
 
@@ -1293,6 +1469,24 @@ async function applyDirect(env, token, order, specifier, courier, reason, action
   const effectiveReason = pickedReason || existingReason;
   const reasonIsNew     = !!pickedReason && pickedReason !== existingReason;
   const reasonSource    = !effectiveReason ? null : (reasonIsNew ? 'operator' : 'existing');
+
+  // ─── v4.5.0 🔴 — التحقق من السبب **قبل** أي فعل لا رجعة فيه ───
+  // #52732 (03-09-2026): orderCancel نجحت، وبعدها metafieldsSet اترفضت لأن
+  // السبب المختار كان اتشال من تعريف الميتافيلد. النتيجة: أوردر ملغي على
+  // شوبيفاي وحالته لسه "Ready"، اتصلّح باليد، والسبب الإلزامي ضاع نهائي.
+  // الفحص هنا بيرمي **قبل** cancelOrder، فالأوردر مابيتلغيش أصلاً والموظف
+  // بيقرا رسالة بتقول له يعمل إيه.
+  // ⚠️ fail-open لو القايمة نفسها ما وصلتش (list فاضية): مانوقفش الشغل بسبب
+  //    فشل في جلب قايمة — بنوقفه بس على قيمة **معروف** إنها مرفوضة.
+  if (reasonIsNew && reasonChoices) {
+    const list = (specifier === 'Cancelled' ? reasonChoices.cancel : reasonChoices.return) || [];
+    if (list.length && !list.includes(pickedReason)) {
+      throw new Error(
+        `سبب غير معرّف في شوبيفاي: "${pickedReason}" — قايمة الأسباب اتغيّرت. ` +
+        `حدّث الصفحة (F5) واختار سبب من القايمة الجديدة. (مفيش أي تغيير حصل على الأوردر)`
+      );
+    }
+  }
 
   // ---- metafield writes (one batched mutation per order) ----
   const target = spec.field === 'S1' ? MF.S1 : MF.S2;
@@ -1354,9 +1548,18 @@ async function applyDirect(env, token, order, specifier, courier, reason, action
   // بترجّع job غير متزامن، فمفيش تأكيد فوري إن الإلغاء اتنفذ فعلاً.
   let cancelStartedAt = null, cancelJobId = null;
   if (specifier === 'Cancelled' || specifier === 'Returned') {
-    cancelStartedAt = new Date().toISOString();
-    ({ jobId: cancelJobId } = await cancelOrder(env, token, order.gid));
-    actions.push('orderCancel');
+    // v4.5.0 — idempotent. الأوردر اللي اتلغى قبل كده (إمّا محاولة سابقة وقعت
+    // بعد الإلغاء وقبل كتابة الحالة، أو حد لغاه من داشبورد شوبيفاي) كان
+    // بيخلّي cancelOrder ترفض → "فشل" أبدي، والحالة عمرها ما تتكتب.
+    // دلوقتي بنكتب الحالة عادي ونوسم الصف warning.
+    if (order.isCancelled) {
+      actions.push('orderCancel:skipped-already-cancelled');
+      warnings.push('الأوردر كان ملغي على شوبيفاي قبل كده — اتكتبت الحالة بس من غير إلغاء جديد');
+    } else {
+      cancelStartedAt = new Date().toISOString();
+      ({ jobId: cancelJobId } = await cancelOrder(env, token, order.gid));
+      actions.push('orderCancel');
+    }
   }
 
   await setMetafields(env, token, mfs);
@@ -1384,11 +1587,24 @@ async function applyDirect(env, token, order, specifier, courier, reason, action
     }
   }
 
+  // ═══ v4.5.0 🟠 — كل فعل **بعد** كتابة الحالة نتيجته warning مش error ═══
+  // الحالة اتكتبت خلاص ومفيش رجوع فيها. الرمي هنا كان بيدّي "❌ فشل" على أوردر
+  // **اتحدّث فعلاً**، والأوردر يفضل في القايمة، وإعادة المحاولة ترجّع "انتقال
+  // غير مسموح" لأن S1/S2 اتحركوا — يعني حفرة مقفولة، إصلاحها يدوي بس.
+  // حصلت مرتين على الأقل في السجل (reverseDispose 18-08 · fulfillmentCreate
+  // 14-08). deleteMetafields فوق كانت الوحيدة المتعاملة صح — دلوقتي الأربعة
+  // بنفس النمط: warning + رسالة بتقول **إيه** اللي محتاج مراجعة يدوية.
+  // (worker-builder Step 5A ④ — «warning = الفعل الأساسي تم بس فيه حاجة ما اتأكدتش»)
+
   // Ready / Ready_S2: back to Unfulfilled (courier returned before delivery)
   if (specifier === 'Ready' || specifier === 'Ready_S2') {
     if (order.fulfillments.length) {
-      const n = await cancelFulfillments(env, token, order.fulfillments);
-      actions.push(`fulfillmentCancel×${n}`);
+      try {
+        const n = await cancelFulfillments(env, token, order.fulfillments);
+        actions.push(`fulfillmentCancel×${n}`);
+      } catch (e) {
+        warnings.push(`الحالة اتكتبت، لكن إلغاء التنفيذ (fulfillment) فشل (${e.message}) — الأوردر لسه Fulfilled على شوبيفاي، ألغيه يدويًا`);
+      }
     }
   }
 
@@ -1396,21 +1612,59 @@ async function applyDirect(env, token, order, specifier, courier, reason, action
   if (specifier === 'Shipped' || specifier === 'Shipped_S2') {
     const open = order.fulfillmentOrders.filter(fo => fo.status === 'OPEN');
     if (open.length) {
-      const n = await createFulfillment(env, token, open);
-      actions.push(`fulfillmentCreate(${n} FO)`);
+      try {
+        const f = await createFulfillment(env, token, open);
+        actions.push(`fulfillmentCreate:${f?.id || '—'}(${open.length} FO)`);
+      } catch (e) {
+        // ⚠️ ده أخطر واحد فيهم: الأوردر مكتوب عليه Shipped واتطبع في المانفيست
+        // والمندوب مشي بيه، وشوبيفاي لسه شايفاه Unfulfilled.
+        warnings.push(`الحالة اتكتبت، لكن التنفيذ (fulfillment) على شوبيفاي فشل (${e.message}) — الأوردر لسه Unfulfilled، نفّذه يدويًا`);
+      }
     }
   }
 
   // Returned_S2: restock every returned piece
   if (specifier === 'Returned_S2') {
-    const { stats, warnings: disposeWarnings } = await disposeReturns(env, token, env.LOCATION_ID, order.returns);
-    if (stats.confirmed) actions.push(`reverseDispose×${stats.confirmed}`);
-    warnings.push(...disposeWarnings);
+    try {
+      const { stats, warnings: disposeWarnings } = await disposeReturns(env, token, env.LOCATION_ID, order.returns);
+      if (stats.confirmed) actions.push(`reverseDispose×${stats.confirmed}`);
+      warnings.push(...disposeWarnings);
+    } catch (e) {
+      warnings.push(`الحالة اتكتبت، لكن استرجاع المخزون فشل (${e.message}) — القطع **لسه ما رجعتش** للمخزن، راجعها يدويًا`);
+    }
   }
 
   // v4.3.0 — effectiveReason/reasonSource بيرجعوا عشان صف D1 يسجّل السبب
   // الحقيقي للأوردر ومصدره، حتى لو موظف العمليات ما اختارش حاجة بنفسه.
   return { warnings, cancelStartedAt, cancelJobId, effectiveReason, reasonSource };
+}
+
+// ─── §STATUS::assertIdCount — v4.5.0 ───
+// نداء `nodes(ids:)` بعدد ضخم بيترفض من شوبيفاي، والنتيجة دفعة كاملة فاشلة
+// برسالة GraphQL مبهمة. السيناريو الواقعي: "تحديد الكل" في بحث المندوب بيرجّع
+// لحد ٢٠٠٠ أوردر. الواجهة بتقسّم كمان — ده الحارس التاني.
+function tooManyIds(orderIds) {
+  return orderIds.length > MAX_ORDER_IDS
+    ? `عدد كبير: ${orderIds.length} أوردر في نداء واحد — الحد ${MAX_ORDER_IDS}. قسّمهم على دفعات.`
+    : null;
+}
+
+// ─── §STATUS::fetchReasonChoices — v4.5.0 ───
+// نفس مصدر `reason_values` بالظبط. بتتنادى في `update_status` كمان عشان
+// التحقق من السبب يحصل **قبل** أي فعل لا رجعة فيه (شوف applyDirect).
+async function fetchReasonChoices(env, token) {
+  const data = await shopifyGQL(env, token, `
+    { metafieldDefinitions(first: 50, ownerType: ORDER) {
+        nodes { namespace key validations { name value } } } }
+  `, {}, 'reasonChoices');
+  const defs = data?.data?.metafieldDefinitions?.nodes || [];
+  const pick = (key) => {
+    const def = defs.find(d => d.namespace === 'custom' && d.key === key);
+    const ch  = def?.validations?.find(v => v.name === 'choices');
+    if (!ch?.value) return [];
+    try { return JSON.parse(ch.value); } catch { return []; }
+  };
+  return { cancel: pick(MF.CANCEL_REASON.key), return: pick(MF.RETURN_REASON.key) };
 }
 
 // ─── §STATUS::runCourierSearch ───
@@ -1422,21 +1676,27 @@ async function runCourierSearch(env, token, courier, rule, since, noCourier = fa
   const orClause = (key, values) =>
     values.map(v => `metafields.custom.${key}:${JSON.stringify(v)}`).join(' OR ');
 
-  const parts = [noCourier ? `-metafields.custom.courier:*` : `metafields.custom.courier:"${courier}"`];
+  // JSON.stringify بيلفّ بعلامتي تنصيص **ويهرب** الـ `"` و`\` جوّه القيمة —
+  // نفس اللي orClause بتعمله. الصياغة اليدوية القديمة كانت بتكسر صيغة بحث
+  // شوبيفاي على أي اسم مندوب فيه علامة تنصيص.
+  const parts = [noCourier ? `-metafields.custom.courier:*` : `metafields.custom.courier:${JSON.stringify(String(courier))}`];
   if (rule.s1Sources)    parts.push(`(${orClause('manual_status', rule.s1Sources)})`);
   if (rule.s2Sources)    parts.push(`(${orClause('status_2_r_e',  rule.s2Sources)})`);
   if (rule.s1Constraint) parts.push(`(${orClause('manual_status', rule.s1Constraint)})`);
   parts.push(`created_at:>=${since}`);
 
-  const queryStr = parts.join(' AND ').replace(/"/g, '\\"');
+  // v4.5.0 — نص البحث بيتبعت كـ variable. قبل كده كان بيتضفّر في المستند نفسه
+  // ومعاه `.replace(/"/g,'\\"')` اللي بيغطي علامة التنصيص بس — أي `\` في اسم
+  // مندوب أو في createdAfter كان بيكسر المستند كله.
+  const queryStr = parts.join(' AND ');
 
   const orders = [];
   let hasNextPage = true, endCursor = null, pageCount = 0;
 
   while (hasNextPage && pageCount < SEARCH_MAX_PAGES) {
-    const cursorArg = endCursor ? `, after: "${endCursor}"` : '';
     const data = await shopifyGQL(env, token, `
-      { orders(first: 100, reverse: true, query: "${queryStr}"${cursorArg}) {
+      query CourierOrders($q: String!, $after: String) {
+        orders(first: 100, reverse: true, query: $q, after: $after) {
           pageInfo { hasNextPage endCursor }
           edges { node {
             id name cancelledAt
@@ -1444,7 +1704,7 @@ async function runCourierSearch(env, token, courier, rule, since, noCourier = fa
             s2: metafield(namespace: "custom", key: "status_2_r_e")  { value }
           } }
         } }
-    `);
+    `, { q: queryStr, after: endCursor }, 'courierSearch');
 
     for (const { node } of (data?.data?.orders?.edges || [])) {
       if (!node?.id) continue;
@@ -1477,6 +1737,14 @@ export default {
       return new Response(null, { status: 204, headers: getCORS(request) });
 
     // 2. WORKER_SECRET — always second
+    // 🔴 v4.5.0 — الحارس ده أول حاجة: لو `WORKER_SECRET` غايب (سر اتمسح · نسخة
+    // اتعملها Promote من غير الأسرار · Worker شبح)، القالب كان بينتج السلسلة
+    // الحرفية "Bearer undefined" — يعني أي طلب معاه الهيدر ده **بيعدّي**.
+    // الحالة اللي المفروض تبقى "كل حاجة 401" كانت بتتحول لـ "الحماية اتشالت"،
+    // على Worker بيلغي أوردرات ويحرّك مخزون. (ecommoda-constants §6)
+    if (typeof env.WORKER_SECRET !== 'string' || !env.WORKER_SECRET.trim())
+      return json({ ok: false, error: 'WORKER_SECRET غير مضبوط على الـ Worker — أضِفه من Dashboard → Variables ثم Promote النسخة.', step: 'env' }, 500, request);
+
     const auth = request.headers.get('Authorization');
     if (!auth || auth !== `Bearer ${env.WORKER_SECRET}`)
       return json({ error: 'Unauthorized' }, 401, request);
@@ -1489,6 +1757,7 @@ export default {
       // ─── §AUTH ──────────────────────────────────────────────────────────
 
       if (action === 'check_employee') {
+        assertEnv(env);   // v4.5.0 — بيتحقق من binding الـ DB (مسار D1 فقط)
         const username = url.searchParams.get('username');
         if (!username) return json({ ok: false, error: 'username مطلوب' }, 400, request);
         const result = await checkEmployee(env.DB, username);
@@ -1538,6 +1807,7 @@ export default {
       }
 
       if (action === 'get_employees') {
+        assertEnv(env);   // v4.5.0
         const { results } = await env.DB.prepare(
           'SELECT username, display_name FROM employees WHERE is_active = 1 ORDER BY display_name'
         ).all();
@@ -1578,25 +1848,14 @@ export default {
       // courier_values فوق).
       if (action === 'reason_values') {
         assertEnv(env, 'shopify');
-        const token = await getAccessToken(env);
-
-        const data = await shopifyGQL(env, token, `
-          { metafieldDefinitions(first: 50, ownerType: ORDER) {
-              nodes { namespace key validations { name value } } } }
-        `, {}, 'reasonValues');
-        const defs = data?.data?.metafieldDefinitions?.nodes || [];
-
-        const extractChoices = (key) => {
-          const def = defs.find(d => d.namespace === 'custom' && d.key === key);
-          const choices = def?.validations?.find(v => v.name === 'choices');
-          if (!choices?.value) return [];
-          try { return JSON.parse(choices.value); } catch { return []; }
-        };
-
+        const token   = await getAccessToken(env);
+        // v4.5.0 — مصدر واحد مشترك مع التحقق في update_status. لو اتفرّقوا،
+        // الواجهة بتعرض قايمة والـ Worker بيتحقق من قايمة تانية.
+        const choices = await fetchReasonChoices(env, token);
         return json({
           ok: true,
-          cancelReasons: extractChoices(MF.CANCEL_REASON.key),
-          returnReasons: extractChoices(MF.RETURN_REASON.key),
+          cancelReasons: choices.cancel,
+          returnReasons: choices.return,
         }, 200, request);
       }
 
@@ -1606,6 +1865,8 @@ export default {
         assertEnv(env, 'shopify');
         const { orderIds = [] } = await request.json().catch(() => ({}));
         if (!orderIds.length) return json({ ok: false, error: 'orderIds مطلوب' }, 400, request);
+        const tooMany = tooManyIds(orderIds);
+        if (tooMany) return json({ ok: false, error: tooMany }, 400, request);
         const token = await getAccessToken(env);
         return json({ ok: true, names: await resolveOrderNames(env, token, orderIds) }, 200, request);
       }
@@ -1628,6 +1889,8 @@ export default {
         assertEnv(env, 'shopify');
         const { orderIds = [] } = await request.json().catch(() => ({}));
         if (!orderIds.length) return json({ ok: false, error: 'orderIds مطلوب' }, 400, request);
+        const tooManyStates = tooManyIds(orderIds);
+        if (tooManyStates) return json({ ok: false, error: tooManyStates }, 400, request);
 
         const token  = await getAccessToken(env);
         const states = await fetchOrderStates(env, token, orderIds, false);
@@ -1655,10 +1918,12 @@ export default {
         assertEnv(env, 'shopify');
         const { orderIds = [] } = await request.json().catch(() => ({}));
         if (!orderIds.length) return json({ ok: false, error: 'orderIds مطلوب' }, 400, request);
+        const tooManyDetails = tooManyIds(orderIds);
+        if (tooManyDetails) return json({ ok: false, error: tooManyDetails }, 400, request);
 
         const token = await getAccessToken(env);
         const data  = await shopifyGQL(env, token, `
-          { nodes(ids: ${JSON.stringify(orderIds.map(gid))}) {
+          query OrderDetails($ids: [ID!]!) { nodes(ids: $ids) {
               ... on Order {
                 id name
                 totalOutstandingSet { shopMoney { amount } }
@@ -1669,7 +1934,7 @@ export default {
                 }
               }
             } }
-        `, {}, 'orderDetails');
+        `, { ids: orderIds.map(gid) }, 'orderDetails');
 
         const details = {};
         for (const n of (data?.data?.nodes || [])) {
@@ -1735,7 +2000,10 @@ export default {
         }
 
         return json({
+          // v4.5.0 — `cap` بترجع من هنا عشان الواجهة **ماتكتبش** الرقم عندها
+          // ويتعتّق (نفس قاعدة LOG_EXPORT_MAX — html-builder Standards #30).
           ok: true, orders: [...seen.values()], truncated, scannedPages, since,
+          cap: SEARCH_MAX_PAGES * 100,
         }, 200, request);
       }
 
@@ -1759,6 +2027,8 @@ export default {
         } = body;
 
         if (!orderIds.length)  return json({ ok: false, error: 'orderIds مطلوب' }, 400, request);
+        const tooManyUpdate = tooManyIds(orderIds);
+        if (tooManyUpdate)     return json({ ok: false, error: tooManyUpdate }, 400, request);
         const labelCfg = TARGET_LABELS[targetLabel];
         if (!labelCfg)          return json({ ok: false, error: `targetLabel غير معروف: ${targetLabel}` }, 400, request);
         if (!employee)          return json({ ok: false, error: 'employee مطلوب' }, 400, request);
@@ -1809,6 +2079,16 @@ export default {
           }
         }
 
+        // ─── v4.5.0 — قايمة الأسباب الحية، نداء واحد للدفعة كلها ───
+        // بتتمرر لـ applyDirect عشان التحقق يحصل **قبل** cancelOrder.
+        // فشل الجلب مابيوقفش الشغل (null = مفيش تحقق) — التحقق حماية إضافية
+        // مش شرط تشغيل، والـ metafieldsSet لسه بترفض القيمة الغلط بره القايمة.
+        let reasonChoices = null;
+        if (targetLabel === 'Cancelled' || targetLabel === 'Returned') {
+          try { reasonChoices = await fetchReasonChoices(env, token); }
+          catch { reasonChoices = null; }
+        }
+
         const results      = [];
         const cancelRecords = []; // §STATUS::verifyCancels — {orderId, gid, startedAt, row}
 
@@ -1849,7 +2129,7 @@ export default {
             if (specifier !== 'Cancelled' && specifier !== 'Returned') row.reason = null;
 
             const { warnings, cancelStartedAt, cancelJobId, effectiveReason, reasonSource } =
-              await applyDirect(env, token, order, specifier, courier, row.reason, row.actions);
+              await applyDirect(env, token, order, specifier, courier, row.reason, row.actions, reasonChoices);
             row.warnings = warnings;
             row.status   = warnings.length ? 'warning' : 'success';
             // v4.3.0 — السبب اللي بيتسجّل هو السبب **الفعلي** للأوردر: اللي
@@ -1981,12 +2261,15 @@ export default {
         catch (e) { d1Error = e.message; }
 
         let shopifyAuth = { ok: false, error: null, scopes: [] };
-        let token = null;
+        let token = null, throttle = null;
         try {
           token = await getAccessToken(env);
           const data = await shopifyGQL(env, token, `{ currentAppInstallation { accessScopes { handle } } }`, {}, 'diag:scopes');
           shopifyAuth.ok = true;
           shopifyAuth.scopes = (data?.data?.currentAppInstallation?.accessScopes || []).map(s => s.handle);
+          // v4.5.0 — حالة سقف التكلفة. من غيرها الاقتراب من السقف مابيبانش غير
+          // بانفجار دفعة كاملة (شوف STATES_CHUNK_RETURNS).
+          throttle = data?.extensions?.cost?.throttleStatus || null;
         } catch (e) { shopifyAuth.error = e.message; }
 
         let locationCheck = { present: !!env.LOCATION_ID, resolvesOk: false, name: null, error: null };
@@ -2000,12 +2283,34 @@ export default {
 
         const allOk = d1Ok && shopifyAuth.ok && (!env.LOCATION_ID || locationCheck.resolvesOk);
 
+        // ─── v4.5.0 — `checks` بالشكل الموحّد (worker-builder v2.1.0) ───
+        // مصفوفة [{ ok, label, detail }] بـ `ok` **صريحة** — الشكل القديم
+        // (مفاتيح top-level) كان بيخلّي أي مستهلك يخمّن. ده "أول تعديل مقصود"
+        // اللي CLAUDE.md كان مستني عشان يوحّد الشكل.
+        // ⚠️ المفاتيح القديمة (d1 · shopifyAuth · locationCheck) **باقية زي ما
+        // هي** فترة انتقالية: أي واجهة متكاشة في متصفح موظف لسه بتقراها،
+        // وشيلها دلوقتي = شاشة فحص فاضية من غير أي رسالة.
+        const checks = [
+          { ok: d1Ok, label: 'D1 (قاعدة السجلات)', detail: d1Error || 'متصلة' },
+          { ok: shopifyAuth.ok, label: 'اتصال شوبيفاي + صلاحيات التطبيق',
+            detail: shopifyAuth.ok ? (shopifyAuth.scopes || []).join(', ') : (shopifyAuth.error || '') },
+          { ok: !!env.LOCATION_ID && locationCheck.resolvesOk, label: 'LOCATION_ID بيتحل لموقع حقيقي',
+            detail: !env.LOCATION_ID ? 'غير معرَّف' : (locationCheck.resolvesOk ? locationCheck.name : (locationCheck.error || '')) },
+          { ok: typeof env.WORKER_SECRET === 'string' && !!env.WORKER_SECRET.trim(),
+            label: 'WORKER_SECRET مضبوط', detail: 'الطول فقط — القيمة عمرها ما بترجع' },
+          { ok: true, label: 'توقيت القاهرة (محسوب)',
+            detail: `${toCairo(new Date().toISOString())} · إزاحة ${cairoOffsetMinutes(new Date()) / 60}س` },
+        ];
+
         return json({
           ok: true, allOk, version: VERSION,
           origin: request.headers.get('Origin') || null,
           allowedOrigins: ALLOWED_ORIGINS,
-          envKeys, d1: { ok: d1Ok, error: d1Error },
-          shopifyAuth, locationCheck,
+          envKeys,
+          checks,                                    // v4.5.0 — الشكل الموحّد
+          d1: { ok: d1Ok, error: d1Error },          // ⚠️ توافق خلفي — متشالش
+          shopifyAuth, locationCheck,                // ⚠️ توافق خلفي — متشالش
+          throttle,
         }, 200, request);
       }
 
@@ -2014,6 +2319,7 @@ export default {
       // (now accepts a comma-separated list too — multi-select filters).
 
       if (action === 'get_logs') {
+        assertEnv(env);   // v4.5.0
         const employee = url.searchParams.get('employee') || null;
         const status   = url.searchParams.get('status')   || null;
         const courier  = url.searchParams.get('courier')  || null;
@@ -2023,15 +2329,22 @@ export default {
         const dateTo   = url.searchParams.get('dateTo')    || null;
         const sortKey  = url.searchParams.get('sortKey')   || null;   // v3.7.0 — data-table-standard § 8
         const sortDir  = url.searchParams.get('sortDir')   || null;
-        const limit    = Math.min(parseInt(url.searchParams.get('limit')  || '100'), 100);
-        const offset   = Math.max(parseInt(url.searchParams.get('offset') || '0'),    0);
+        // v4.5.0 — حارس NaN: `?offset=abc` كان بيمرّر NaN للـ SQL ويرجّع خطأ
+        // D1 خام في وش الموظف بدل صفحة فاضية.
+        const limit    = intParam(url.searchParams.get('limit'),  100, 1, 100);
+        const offset   = intParam(url.searchParams.get('offset'), 0,   0, Number.MAX_SAFE_INTEGER);
         const entries  = await getLogs(env.DB, {
           tool: TOOL_NAME, employee, status, courier, result, search, dateFrom, dateTo, sortKey, sortDir, limit, offset,
         });
-        return json({ ok: true, entries }, 200, request);
+        // v4.5.0 — الحجم الكامل لكل دفعة ظاهرة في الصفحة، عشان الواجهة تكشف
+        // الدفعة المقسومة على صفحتين بدل ما تعرضها كمجموعتين ناقصتين بصمت.
+        let batchSizes = {};
+        try { batchSizes = await getBatchSizes(env.DB, TOOL_NAME, entries); } catch { batchSizes = {}; }
+        return json({ ok: true, entries, batchSizes }, 200, request);
       }
 
       if (action === 'get_logs_count') {
+        assertEnv(env);   // v4.5.0
         const employee = url.searchParams.get('employee') || null;
         const status   = url.searchParams.get('status')   || null;
         const courier  = url.searchParams.get('courier')  || null;
@@ -2046,6 +2359,7 @@ export default {
       }
 
       if (action === 'get_logs_export') {
+        assertEnv(env);   // v4.5.0
         const employee = url.searchParams.get('employee') || null;
         const status   = url.searchParams.get('status')   || null;
         const courier  = url.searchParams.get('courier')  || null;

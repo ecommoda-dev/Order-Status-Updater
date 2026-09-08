@@ -2,7 +2,7 @@
 
 # Order Status Updater
 
-![version](https://img.shields.io/badge/version-v1.1.0-blue)
+![version](https://img.shields.io/badge/version-v1.2.0-blue)
 
 أداة داخلية لـ **EcomModa** — موظف العمليات بيحدّث مرحلة الأوردر: دورة S1
 (`custom.manual_status`) ودورة الإرجاع/الاستبدال S2 (`custom.status_2_r_e`)،
@@ -17,6 +17,8 @@
 | `index.html` | الواجهة — بتتنشر على GitHub Pages |
 | `Index.html` | صفحة تحويل للرابط القديم (بحرف كبير) |
 | `CLAUDE.md` | قواعد الأداة وفخاخها — بيتحمّل تلقائي في كل جلسة Claude |
+| `order-status-updater-review.md` | مراجعة عميقة 08-09-2026 — ٤٢ بند بدليل من الإنتاج + حالة كل واحد |
+| `skills-updates-2026-09-08.md` | التعديلات المطلوبة في المهارات (تتنفّذ في جلسة منفصلة) |
 
 ## الروابط
 
@@ -42,6 +44,6 @@ Cloudflare Workers Builds، والواجهة عبر GitHub Pages.
 git show b1e37b4:3.5.0.html
 ```
 
-آخر تحديث: 06-09-2026 — 14:30
+آخر تحديث: 08-09-2026 — 01:20
 
 </div>

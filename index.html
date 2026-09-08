@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <!-- skills: html-builder v6.6.0 · worker-builder v2.1.0 · constants v1.4.0 - 06-09-2026 -->
+  <!-- skills: html-builder v6.6.0 · worker-builder v2.1.0 · constants v1.4.0 · order-lifecycle v1.3.0 - 08-09-2026 -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Order Status Updater — EcomModa</title>
@@ -129,6 +129,13 @@ body {
 .toast-success { background: var(--green); }
 .toast-error   { background: var(--red); }
 .toast-neutral { background: var(--neutral-dark); }
+/* v4.5.0 (Standards #41) — النوع الرابع الرسمي. كان **مش معرّف** خالص، يعني
+   أول استدعاء بـ 'warning' كان هيدّي توست بلا خلفية (نص أبيض على شفاف) —
+   فشل صامت. وكل التحذيرات كانت بتتعرض حمرا، والأحمر لكل حاجة = الموظف
+   بيتعوّد يتجاهله. */
+.toast-warning { background: var(--amber); }
+.toast-warn    { background: var(--amber); }   /* اسم بديل للأدوات القديمة */
+.toast-info    { background: var(--neutral-dark); }
 
 .loading-spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -511,6 +518,15 @@ body {
 .reason-select.reason-missing { border-color: var(--red); background: var(--red-light); color: var(--red); font-weight: 700; }
 /* v4.1.0 — خانة "مش مطلوب" لصفوف Returned اللي بتتحل S2 (السبب مش مطلوب فيها) */
 .reason-na { color: var(--text-muted); font-size: 12px; font-style: italic; }
+/* v4.5.0 — صف كود مش أوردر معروف على شوبيفاي (لاصقة غلط). أوضح من row-bad:
+   شريط أحمر عريض على جنب الصف عشان يبان وسط صفوف كتير من غير قراءة. */
+.otbl tbody tr.row-unknown { background: var(--red-light); }
+.otbl tbody tr.row-unknown td { border-block-end-color: var(--red-border); }
+.otbl tbody tr.row-unknown td:first-child { box-shadow: inset 4px 0 0 0 var(--red); }
+.otbl tbody tr.row-unknown:hover { background: var(--red-light); }
+/* v4.5.0 — كانت مستخدمة في الجدول ومش معرّفة في أي مكان */
+.otbl td.c-del { width: 36px; text-align: center; }
+.otbl td.c-reason { min-width: 190px; }
 /* v4.3.0 — شارة "السبب جاي من شوبيفاي" جنب قائمة الاختيار */
 .reason-src { display: block; margin-top: 4px; font-size: 10.5px; font-weight: 700; color: var(--text-sub); white-space: nowrap; cursor: help; }
 .del-x { background: none; border: none; color: var(--red); font-size: 15px; cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 5px; }
@@ -525,6 +541,10 @@ body {
 .pill-empty { color: var(--text-muted); font-size: 11px; }
 .mini-badge { display: inline-block; padding: 1px 7px; border-radius: 5px; font-size: 10px; font-weight: 800; margin-inline-start: 6px; border: 1px solid; }
 .mini-badge.bad { background: var(--red-light); color: var(--red); border-color: var(--red-border); }
+/* v4.5.0 (Standards #38) — الزرار الأساسي في نافذة بحالة سلبية/نهائية.
+   مش بديل لـ .modal-close-x (زرار الـ ✕ الصغير في الهيدر — قاعدة منفصلة). */
+.btn-red { background: var(--red); border-color: var(--red); color: var(--on-accent); }
+.btn-red:hover { background: var(--red-dark); border-color: var(--red-dark); }
 .empty-box { text-align: center; padding: 30px; color: var(--text-muted); font-size: 13px; }
 .empty-box .ei { font-size: 28px; display: block; margin-bottom: 8px; }
 
@@ -592,6 +612,11 @@ body {
 
 /* Log table — organized columns (§LOG-JS::renderLog) */
 .log-otbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+/* v4.5.0 — بادج الدفعة المقسومة على أكتر من صفحة + سطر تحذير التحديد */
+.split-badge { display: inline-block; margin-inline-start: 6px; padding: 1px 7px; border-radius: 5px;
+  font-size: 10px; font-weight: 800; background: var(--amber-light); color: var(--amber-dark);
+  border: 1px solid var(--amber-border); cursor: help; white-space: nowrap; }
+.log-sel-hint { font-size: 11px; font-weight: 600; color: var(--amber-dark); }
 .log-otbl thead th { position: sticky; top: 0; text-align: center; padding: 8px 8px; background: var(--surface-2); border-bottom: 1.5px solid var(--border); font-size: 10.5px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; border-inline-start: 1px solid var(--border); z-index: 2; }
 .log-otbl thead th:first-child { border-inline-start: none; }
 .log-otbl thead th.sortable-th { cursor: pointer; user-select: none; transition: background .12s, color .12s; }
@@ -719,6 +744,10 @@ body {
 .range-preset-item { padding:7px 12px; font-size:12px; cursor:pointer; border-radius:6px; color:var(--text-primary); display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .range-preset-item:hover { background:var(--surface-2); }
 .range-preset-item.active { background:var(--accent-light); color:var(--accent); }
+/* v4.5.0 — .pr-arrow كانت مستخدمة في زرار الفترة السريعة ومش معرّفة، فالسهم
+   ماكانش بيلف مع فتح القائمة (بعكس .ms-arrow) */
+.range-preset-btn .pr-arrow { font-size: 10px; color: var(--text-secondary); transition: transform .15s; }
+.range-preset-btn.open .pr-arrow { transform: rotate(180deg); }
 .range-preset-item .pr-check { font-size:11px; color:var(--accent); display:none; }
 .range-preset-item.active .pr-check { display:block; }
 .range-preset-sep { height:1px; background:var(--border); margin:3px 4px; }
@@ -848,7 +877,27 @@ body {
 
       <div class="cl-version-block">
         <div class="cl-version-row">
-          <span class="cl-ver-badge" id="clLatestVerBadge">v4.4.0</span>
+          <span class="cl-ver-badge" id="clLatestVerBadge">v4.5.0</span>
+          <span class="cl-ver-date">08-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>أوردرات المرتجع اللي بوسطة سجّلتها «In-Return» كانت مقفولة نهائيًا في الأداة.</strong> كنت بتشوف «انتقال غير مسموح» على الأوردر اللي المفروض تقفله بالظبط — وأهم من كده، القطع الراجعة <strong>ماكانتش بترجع للمخزن</strong> لأن ده بيحصل في مسار الإرجاع اللي كان مقفول. المشكلة كانت بتظهر على أوردرات بوسطة بس، فالقاهرة والجيزة ما اتأثروش وماحدش لاحظ. دلوقتي «In-Return» بتتعامل زي «Shipped» عادي: تقدر تقفلها Returned، أو ترجّعها Ready لدورة تسليم جديدة.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>الأوردر كان ممكن يتلغى على شوبيفاي وحالته ما تتكتبش.</strong> لو السبب اللي اخترته كان اتشال من قايمة الأسباب في شوبيفاي، الإلغاء كان بيتنفّذ الأول وبعدين كتابة الحالة تترفض — فالأوردر يفضل ملغي وحالته «Ready»، وإعادة المحاولة <strong>مستحيلة</strong> (بترجع فشل للأبد). دلوقتي الأداة بتتأكد من السبب <strong>قبل</strong> ما تلغي أي حاجة، ولو الأوردر كان ملغي أصلاً بتكتب الحالة عادي بدل ما تقف.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>قايمة أسباب الإلغاء/الإرجاع كانت بتفضل قديمة طول ما التاب مفتوح.</strong> لو القايمة اتعدّلت في شوبيفاي وإنت فاتح الأداة من الصبح، كنت لسه شايف القيم القديمة — واختيار واحدة اتشالت هو اللي كان بيسبّب العطل اللي فوق. دلوقتي بتتحدّث مع كل مرة تختار حالة مستهدفة.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>«فشل» كان بيظهر على أوردرات اتحدّثت فعلاً.</strong> لو الحالة اتكتبت وبعدين حصلت مشكلة في خطوة تانية (إلغاء التنفيذ · التنفيذ على شوبيفاي · استرجاع المخزون)، الأوردر كان بيتقال عليه فشل ويفضل في القايمة — وإعادة المحاولة ترجّع «انتقال غير مسموح» لأنه اتحدّث خلاص. دلوقتي بيبقى <strong>تحذير أصفر</strong> برسالة بتقول بالظبط إيه اللي محتاج مراجعة يدوية، والأوردر بيخرج من القايمة.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>الكود الغلط بقى بيتمسك وقت المسح مش بعد التحديث.</strong> أي باركود مش أوردر معروف على شوبيفاي (لاصقة منتج · AWB بوسطة · لاصقة قديمة) كان بيتقبل <strong>بصوت نجاح</strong> ويظهر كصف فاضي بـ <code>#—</code>، وما تعرفش إنه غلط غير لما تضغط «تحديث الكل». دلوقتي: صوت خطأ + اهتزاز + <strong>الصف بيتلوّن أحمر بشريط جانبي وبادج «❓ كود مش أوردر معروف»</strong> + نافذة بتقول لك الأكواد وفيها زرار بيشيلهم بضغطة، والتحديث مقفول لحد ما يتشالوا.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>المسح أثناء التحديث كان ممكن يخبّط الدفعة.</strong> لو مسحت أوردر جديد والتحديث لسه شغّال، القايمة كانت بتتزحزح فأوردر يتبعت مرتين وأوردر تاني <strong>يتخطّى خالص</strong> من غير أي رسالة. دلوقتي مربع المسح والإضافة اليدوية وأزرار الحذف بتتقفل طول التحديث، والدفعة بتشتغل على لقطة ثابتة.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>نافذة ملخص التحديث بقت بتاخد التركيز.</strong> قبل كده أول سكانة بعد كل دفعة كانت <strong>بتضيع في السكوت</strong> لأن مفيش حاجة مركّز عليها. دلوقتي <code>Enter</code> أو <code>Esc</code> بيقفلوا النافذة ويرجّعوا التركيز للسكانر على طول.</span></li>
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><strong>الطباعة كانت بتفشل من غير أي رسالة</strong> لو المتصفح مانع النوافذ المنبثقة — كنت تفتكر إن المانفيست اتطبع. دلوقتي بتظهر رسالة واضحة بتقول لك تسمح بالـ Pop-ups.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>الدفعة المتقسّمة على صفحتين في السجل بقت متعلّمة.</strong> بادج <code>✂</code> بيقول «كذا من كذا» — قبل كده كانت بتتعرض كعمليتين منفصلتين بعدادات ناقصة وزرار طباعة بيطبع نصها بس. والتحديد في السجل مابقاش يتمسح لما تغيّر الصفحة.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>التوقيت بقى محسوب مش مكتوب.</strong> الأداة كانت شايلة فرق التوقيت رقم ثابت، وكان هيغلط بساعة أول ما التوقيت الصيفي يخلص في <strong>29-10-2026</strong> — في كل وقت معروض، وفي فلاتر التاريخ، و<strong>في تاريخ الاستلام اللي بيتكتب على الأوردر</strong>. دلوقتي بيتحسب أوتوماتيك.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span>التحذيرات بقت <strong>صفرا</strong> بدل حمرا (الأحمر بقى للفشل الحقيقي بس)، وزرار «شيلهم/تم» في النوافذ النهائية بقى أحمر. وتنضيف داخلي واسع: هروب آمن لكل الأسماء الجاية من شوبيفاي و D1، وحدود واضحة على حجم كل نداء، وحماية من رد غير متوقع من السيرفر.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v4.4.0</span>
           <span class="cl-ver-date">06-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -1127,7 +1176,7 @@ body {
             <tr><td><code>order_details</code></td><td>اسم العميل والهاتف والعنوان والـ COD للمانفيست</td></tr>
             <tr><td><code>get_logs</code></td><td>صفحة سجل (100 صف) — يقبل employee/status/courier/result/search/dateFrom/dateTo (كلهم اختيار متعدد comma-separated ما عدا search/dateFrom/dateTo) + <code>sortKey</code>/<code>sortDir</code> (v3.7.0 — ترتيب على السيرفر: timestamp/employee/courier/status، مش result). <code>result</code> بيفلتر على <code>extra.result</code>: success/warning/error</td></tr>
             <tr><td><code>get_logs_count</code></td><td>العدد الكلي المطابق لنفس الفلاتر أعلاه</td></tr>
-            <tr><td><code>get_logs_export</code></td><td>تصدير XLSX حتى 2000 صف — نفس الفلاتر أعلاه</td></tr>
+            <tr><td><code>get_logs_export</code></td><td>تصدير XLSX — السقف بيرجع من الـ Worker في <code>cap</code> مع <code>total</code> و<code>truncated</code> (الواجهة ماتكتبش الرقم عندها)</td></tr>
           </table>
 
           <h4>⚙️ إجراءات كل خيار</h4>
@@ -1168,6 +1217,11 @@ body {
             <li><code>فلاتر السجل (حالة/مندوب/النتيجة/موظف اختيار متعدد + بحث + فترة تاريخ في صف منفصل، قسم موحّد unified-section من v3.7.0)</code> — HTML §LOG-JS — <code>msState</code> / <code>fetchLog()</code> / <code>anyFilterActive()</code> — Worker §SHARED — <code>buildLogFilterSQL()</code></li>
             <li><code>ترتيب أعمدة السجل (تاريخ/حالة/مندوب/موظف — تصاعدي/تنازلي/بلا ترتيب، على السيرفر)</code> — HTML §LOG-JS — <code>toggleLogSort()</code> / <code>logSortState</code> — Worker §SHARED — <code>buildLogSortSQL()</code> / <code>LOG_SORT_COLUMNS</code></li>
             <li><code>تصدير XLSX (الكل أو المحدد)</code> — HTML §LOG-JS — <code>exportLogXLSX()</code> / <code>exportSelectedLogXLSX()</code> / <code>buildAndDownloadWorkbook()</code> / <code>reportExportResult()</code> / <code>clearExportWarn()</code>. (v4.4.0) <code>get_logs_export</code> بيرجّع <code>{ cap, total, truncated }</code> والواجهة بتعرض بانر ثابت <code>#logExportWarn</code> بالرقمين لو الملف اتقص — رسالة النجاح في فرع <code>else</code> بس.</li>
+            <li><code>كشف الأكواد المجهولة (لاصقة غلط) + تمييز بصري + نافذة شيل</code> — HTML §TOOL-JS — <code>hydrateOrders()</code> / <code>showUnknownCodesDialog()</code> / <code>removeUnknownOrders()</code> / <code>.row-unknown</code></li>
+            <li><code>قفل الإدخال أثناء التحديث + لقطة ثابتة للدفعة</code> — HTML §TOOL-JS — <code>setUpdateLock()</code> / <code>doStartUpdate()</code></li>
+            <li><code>التحقق من السبب قبل الإلغاء + إلغاء idempotent</code> — Worker §STATUS — <code>fetchReasonChoices()</code> / <code>applyDirect()</code></li>
+            <li><code>كشف الدفعة المقسومة على صفحتين في السجل</code> — Worker §SHARED — <code>getBatchSizes()</code> · HTML §LOG-JS — <code>logBatchSizes</code> / <code>.split-badge</code></li>
+            <li><code>توقيت القاهرة المحسوب (بدل الثابت)</code> — الملفين — <code>cairoParts()</code> / <code>cairoOffsetMinutes()</code> / <code>toCairo()</code> / <code>cairoDate()</code></li>
             <li><code>D1 log write (صف لكل أوردر)</code> — Worker §HANDLER — <code>writeLog()</code></li>
           </ul>
 
@@ -1219,8 +1273,15 @@ body {
             <li><strong>v4.0.0 — سبب الإلغاء/الإرجاع:</strong> العمود بيظهر لما الحالة المستهدفة <code>Cancelled</code> أو <code>Returned</code> (<code>needsReasonFor()</code>). القيم مسحوبة حصريًا من قوائم الاختيار المعرّفة في الميتافيلدز (<code>reason_values</code>) — الأداة ما بتخترعش أو بتحفظش قيم قديمة. الـ Worker مايتحققش بنفسه من إن القيمة ضمن الـ choices؛ شوبيفاي نفسها بترفض القيمة الخارجة عن القائمة على مستوى <code>metafieldsSet</code> (تعريف الميتافيلد Choice list)، وده بيسقط الأوردر بس مش الدفعة كلها. لو قائمة الاختيارات فاضية (تعريف الميتافيلد من غير choices) الأداة هتفضل معطّلة لهذه الحالة لحد ما تتضاف اختيارات — نفس سلوك <code>courier_values</code> بالظبط.</li>
             <li><strong>v4.1.0 — السبب إلزامي بس لـ S1:</strong> ضمن العمود اللي v4.0.0 عرّفه، الإلزام والكتابة الفعلية بقيا محصورين في الأوردرات اللي <code>orderNeedsReason(id)</code> بترجع لها true — يعني <code>specifier</code> المتحل (<code>clientResolveSpecifier()</code> في الواجهة، <code>resolveSpecifier()</code> في الـ Worker) بيساوي <code>Cancelled</code> أو <code>Returned</code>. أوردر <code>Returned</code> بيتحل <code>Returned_S2</code> (يعني كان أصلاً في مسار استرجاع/استبدال S2 — S2 عنده قيمة) بيوري خانة "مش مطلوب" في الجدول، مايتمنعش زرار "تحديث الكل" بسببه، ومايتكتبش عليه أي سبب على شوبيفاي حتى لو كان فيه قيمة قديمة متسجّلة في <code>orderReasons</code> (الـ Worker بيصفّرها في الصف — <code>row.reason = null</code> — لو الـ specifier المتحل مش S1). القرار ده بيتاخد بعد ما نجيب حالة الأوردر الفعلية من شوبيفاي، مش من نية الموظف وقت اختيار الحالة المستهدفة.</li>
             <li><strong>v4.2.0 — الجدول بيتفتح تلقائي لو فيه سبب ناقص:</strong> <code>applyAutoCollapseRule()</code> بقت بتحسب <code>hasMissingReason</code> جنب <code>hasBlocked</code> الموجود (الشرط كان <code>orderNeedsReason(id) && !orderReasons[id]</code>، وبقى <code>orderReasonMissing(id)</code> في v4.3.0) — أي حدث بيستدعيها (إضافة أوردر، حذف أوردر، اختيار حالة مستهدفة) بيفتح الجدول تلقائي طول ما فيه سبب ناقص، بنفس شرط "المستخدم ما تدخّلش يدوياً" (<code>ordersManualOverride</code>). كمان <code>startUpdate()</code> بقى بيفتح الجدول بالقوة ويعرض نافذة تأكيد بأسماء الأوردرات الناقصة (بدل توست بس) لو الموظف حاول يحدّث والسبب لسه ناقص — بنفس شكل نافذة "أوردرات غير مطابقة" الموجودة أصلاً لحالة الانتقال غير المسموح.</li>
+            <li><strong>v4.5.0 — In-Return مصدر انتقال شرعي:</strong> اتضافت لـ <code>TRANSITION_RULES</code> و<code>TRANSITION_SOURCES</code> في الملفين: <code>S1: In-Return → Returned</code> · <code>S2: In-Return → Returned</code> (جدول <code>ecommoda-order-lifecycle</code> §1.4/§2.2) · و<code>S2: In-Return → Ready</code> (قرار أحمد 08-09-2026 — القطعة بترجع للمكتب وممكن تطلع في دورة تسليم جديدة). كانت ناقصة خالص فكل أوردر بوسطة بيوصل In-Return كان مقفول، و<code>disposeReturns</code> عمره ما بيشتغل عليه فالمخزون مايرجعش. ⚠️ <code>S1: In-Return → Ready</code> <strong>مش</strong> مضافة عمدًا — مش في الجدول المعتمد ولا اتقررت.</li>
+            <li><strong>v4.5.0 — التحقق من السبب قبل الفعل اللي مالوش رجعة:</strong> <code>applyDirect()</code> بتاخد <code>reasonChoices</code> (نداء واحد لكل دفعة عن طريق <code>fetchReasonChoices()</code> — نفس مصدر <code>reason_values</code> بالظبط) وبترمي <strong>قبل</strong> <code>cancelOrder</code> لو السبب الجديد مش في القايمة. الفحص <em>fail-open</em>: لو جلب القايمة نفسه فشل، الشغل بيكمّل وشوبيفاي بترفض القيمة الغلط زي الأول. و<code>cancelOrder</code> بقت idempotent — أوردر ملغي أصلاً بتتكتب حالته مع <code>warning</code> بدل ما يفضل عالق للأبد.</li>
+            <li><strong>v4.5.0 — كل فعل بعد كتابة الحالة = warning مش error:</strong> <code>cancelFulfillments</code> · <code>createFulfillment</code> · <code>disposeReturns</code> بقوا في <code>try/catch</code> زي <code>deleteMetafields</code> بالظبط. الحالة اتكتبت خلاص ومفيش رجوع فيها، فـ"فشل" كان بيخلّي الأوردر يفضل في القايمة وإعادة المحاولة ترجّع "انتقال غير مسموح". التحذير بيقول <strong>إيه</strong> المطلوب مراجعته يدويًا.</li>
+            <li><strong>v4.5.0 — الكود المجهول:</strong> <code>hydrateOrders()</code> بتقارن الـ IDs المطلوبة بالراجعة من <code>order_statuses</code>؛ الناقص بياخد <code>orderInfo[id].unknown = true</code> → <code>orderIsBlocked()</code> بترجع true → صف <code>.row-unknown</code> + بادج + نافذة <code>showUnknownCodesDialog()</code> فيها زرار <code>removeUnknownOrders()</code>. الترطيب نفسه بقى مقسّم <code>HYDRATE_CHUNK = 50</code>.</li>
+            <li><strong>v4.5.0 — قفل الدفعة:</strong> <code>setUpdateLock()</code> بتقفل مربع السكان والإضافة اليدوية وأزرار الحذف، و<code>doStartUpdate()</code> بتشتغل على <code>batchOrders = orders.slice()</code>. اللوب كان بيقرا <code>orders</code> الحية، وإضافة أوردر في النص كانت بتزحزح الحدود فأوردر يتبعت مرتين وأوردر يتخطّى.</li>
+            <li><strong>v4.5.0 — التوقيت محسوب:</strong> <code>CAIRO_OFFSET_HOURS</code> اتشال من الملفين. البديل <code>Intl.DateTimeFormat</code> بـ <code>timeZone: 'Africa/Cairo'</code> (<code>cairoParts</code>/<code>cairoOffsetMinutes</code>) — نفس الدوال بالحرف في الواجهة وفي الـ Worker. <code>toCairo()</code> في الواجهة لسه بترجّع Date مزحزحة عشان باقي الكود يقرا منها بـ <code>getUTC*</code> — العقد ما اتغيّرش.</li>
+            <li><strong>v4.5.0 — سقوف وحماية:</strong> <code>MAX_ORDER_IDS = 50</code> على كل endpoint بياخد <code>orderIds</code> · <code>STATES_CHUNK_RETURNS = 5</code> لبلوك المرتجعات الغالي · حارس <code>WORKER_SECRET</code> الغايب (من غيره المقارنة بتبقى مع <code>"Bearer undefined"</code>) · <code>ESCAPE</code> في <code>LIKE</code> · حارس <code>NaN</code> على <code>limit</code>/<code>offset</code> · GraphQL variables بدل التضفير النصي · <code>readJson()</code> لرد مش JSON.</li>
+            <li><strong>v4.5.0 — <code>diag</code> بالشكل الموحّد:</strong> بقى بيرجّع <code>checks: [{ok,label,detail}]</code> (worker-builder v2.1.0) <strong>مع</strong> المفاتيح القديمة (<code>d1</code>/<code>shopifyAuth</code>/<code>locationCheck</code>) فترة انتقالية — أي واجهة متكاشة في متصفح موظف لسه بتقراها، وشيلها دلوقتي = شاشة فحص فاضية بلا رسالة. <code>runDiag()</code> بتقرا الجديد وبتعمل fallback على القديم.</li>
             <li>currentEmployee lives in JS memory only. Refresh = re-login, by design.</li>
-            <li>Cairo is UTC+3. Egypt DST ends 29-10-2026 → both toCairo() here and CAIRO_OFFSET_HOURS in the Worker must change to +2 on that date.</li>
           </ul>
         </div>
       </details>
@@ -1241,7 +1302,7 @@ body {
     <button class="login-settings-btn missing" id="loginSettingsBtn" onclick="openSettings()">
       ⚙️ الإعدادات
     </button>
-    <span class="login-version-tag" id="loginVersionText">v4.3.0</span>
+    <span class="login-version-tag" id="loginVersionText">v4.5.0</span>
 
     <div class="login-top">
       <div class="login-icon">📦</div>
@@ -1597,6 +1658,7 @@ body {
           <span class="results-label">النتائج:</span>
           <span class="results-count" id="logFilteredCount">—</span>
         </div>
+        <span class="log-sel-hint" id="logSelHint" style="display:none"></span>
       </div>
       <div class="log-btns-end">
         <button class="log-refresh-btn" onclick="event.stopPropagation(); fetchLog();">↺ تحديث</button>
@@ -1636,9 +1698,9 @@ body {
         <p style="margin-top:10px;font-size:13px;" id="csmHint">جاري البحث...</p>
       </div>
       <div id="csmContent" style="display:none;">
-        <div id="csmWarn" class="warn-box" style="display:none;">
-          ⚠️ تم الوصول للحد الأقصى (1000 أوردر) — قد توجد نتائج إضافية لم تُعرض.
-        </div>
+        <!-- v4.5.0 — الرقم بيتكتب من رد الـ Worker (`cap`)، مش مكتوب هنا
+             (نفس قاعدة LOG_EXPORT_MAX — html-builder Standards #30) -->
+        <div id="csmWarn" class="warn-box" style="display:none;"></div>
         <div style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
           <table class="csm-tbl">
             <thead><tr>
@@ -1695,7 +1757,18 @@ async function apiPost(action, body = {}) {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${workerSecret}` },
     body:    JSON.stringify(body),
   });
-  const data = await resp.json();
+  return readJson(resp);
+}
+
+// v4.5.0 — رد مش JSON (صفحة خطأ HTML من كلاودفلير 502/524، أو انقطاع) كان
+// بيدّي "Unexpected token '<'" في وش الموظف. دلوقتي رسالة مفهومة + جزء من الرد.
+async function readJson(resp) {
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch {
+    throw new Error(`رد غير متوقع من الـ Worker (HTTP ${resp.status}) — ${text.slice(0, 140) || 'رد فاضي'}`);
+  }
   if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
   return data;
 }
@@ -1707,9 +1780,7 @@ async function apiGet(action, params = {}) {
   const resp = await fetch(`${workerUrl.replace(/\/$/, '')}?${qs}`, {
     headers: { 'Authorization': `Bearer ${workerSecret}` },
   });
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
-  return data;
+  return readJson(resp);
 }
 
 function shopifyOrderUrl(orderId) {
@@ -1717,9 +1788,9 @@ function shopifyOrderUrl(orderId) {
   return `https://${SHOP_DOMAIN}/admin/orders/${id}`;
 }
 function orderLink(orderNumber, orderId) {
-  const label = String(orderNumber || '').startsWith('#') ? orderNumber : `#${orderNumber || '—'}`;
+  const label = escHtml(String(orderNumber || '').startsWith('#') ? orderNumber : `#${orderNumber || '—'}`);
   if (!orderId) return `<span class="order-num">${label}</span>`;
-  return `<a href="${shopifyOrderUrl(orderId)}" target="_blank" rel="noopener" class="order-link">${label}</a>`;
+  return `<a href="${escHtml(shopifyOrderUrl(orderId))}" target="_blank" rel="noopener" class="order-link">${label}</a>`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1731,15 +1802,19 @@ function orderLink(orderNumber, orderId) {
 // سجل التحديثات + نص شاشة الدخول) وبيتزامنوا يدويًا. دلوقتي المصدر واحد
 // و renderVersionUI() بتملاهم كلهم.
 // ⚠️ لازم يساوي VERSION في الـ Worker — الملفين بيترفعوا مع بعض.
-const TOOL_VERSION = '4.4.0';
+const TOOL_VERSION = '4.5.0';
 
 // §CONFIG::minWorker — أقل نسخة Worker الواجهة دي بتشتغل معاها (Standards #29).
-// v4.3.0 هي النسخة اللي ضافت cancelReason/returnReason في رد order_statuses،
-// واللي الواجهة معتمدة عليها عشان ما تطلبش من الموظف سبب مسجّل قدامه أصلًا.
+// v4.5.0 هي النسخة اللي ضافت `batchSizes` في رد get_logs (كشف الدفعة المقسومة
+// على صفحتين) و`cap` في رد search_courier_orders و`checks` الموحّدة في diag —
+// والواجهة دي بتقرا التلاتة.
+// 🔴 درس v4.4.0: الرقم كان لسه 4.3.0 بينما الواجهة بقت بتقرا cap/total/truncated
+// من get_logs_export اللي اتضافوا في 4.4.0 — يعني الحارس نفسه كان معطّل، ولو
+// الـ Worker رجع لـ 4.3.x كانت رسالة "✅ تم التصدير" هتظهر على ملف مقصوص.
 // ⚠️ صيانة: أي endpoint/حقل جديد الصفحة تعتمد عليه → ارفع الرقم ده لنسخة
 //    الـ Worker اللي ضافته، في نفس التسليم.
 // ⚠️ مالهاش أي علاقة بـ TOOL_VERSION — دي بتوصف أقل Worker مقبول، مش الصفحة.
-const MIN_WORKER_VERSION = '4.3.0';
+const MIN_WORKER_VERSION = '4.5.0';
 
 let workerVersion = null;
 
@@ -1827,16 +1902,26 @@ async function runDiag() {
   btn.disabled = true;
   try {
     const d = await apiGet('diag');
-    const line = (ok, label, detail) => `<div>${ok ? '✅' : '❌'} ${label}${detail ? ' — ' + detail : ''}</div>`;
+    const line = (ok, label, detail) => `<div>${ok ? '✅' : '❌'} ${escHtml(label)}${detail ? ' — ' + escHtml(detail) : ''}</div>`;
     let html = '';
-    html += line(d.d1?.ok, 'D1 (قاعدة السجلات)', d.d1?.error || '');
-    html += line(d.shopifyAuth?.ok, 'اتصال شوبيفاي + صلاحيات التطبيق', d.shopifyAuth?.ok ? (d.shopifyAuth.scopes || []).join(', ') : (d.shopifyAuth?.error || ''));
-    if (d.locationCheck?.present) {
-      html += line(d.locationCheck.resolvesOk, 'LOCATION_ID بيتحل لموقع حقيقي', d.locationCheck.resolvesOk ? d.locationCheck.name : (d.locationCheck.error || ''));
+    // v4.5.0 — الـ Worker بقى بيرجّع `checks` كمصفوفة [{ok,label,detail}]
+    // (worker-builder v2.1.0). الفرع التاني للتوافق مع Worker أقدم — الشكل
+    // القديم لسه بيترجع كمان من الـ Worker الحالي فترة انتقالية.
+    if (Array.isArray(d.checks) && d.checks.length) {
+      html += d.checks.map(c => line(c.ok, c.label || c.name || '', c.detail || '')).join('');
     } else {
-      html += line(false, 'LOCATION_ID', 'غير معرَّف');
+      html += line(d.d1?.ok, 'D1 (قاعدة السجلات)', d.d1?.error || '');
+      html += line(d.shopifyAuth?.ok, 'اتصال شوبيفاي + صلاحيات التطبيق', d.shopifyAuth?.ok ? (d.shopifyAuth.scopes || []).join(', ') : (d.shopifyAuth?.error || ''));
+      if (d.locationCheck?.present) {
+        html += line(d.locationCheck.resolvesOk, 'LOCATION_ID بيتحل لموقع حقيقي', d.locationCheck.resolvesOk ? d.locationCheck.name : (d.locationCheck.error || ''));
+      } else {
+        html += line(false, 'LOCATION_ID', 'غير معرَّف');
+      }
     }
-    html += `<div style="margin-top:6px;color:var(--text-sub)">نسخة الـ Worker: <b>${d.version || '—'}</b> · Origin: ${d.origin || '—'}</div>`;
+    html += `<div style="margin-top:6px;color:var(--text-sub)">نسخة الـ Worker: <b>${escHtml(d.version || '—')}</b> · الحد الأدنى المطلوب: <b>${MIN_WORKER_VERSION}</b> · Origin: ${escHtml(d.origin || '—')}</div>`;
+    if (d.throttle) {
+      html += `<div style="margin-top:2px;color:var(--text-sub)">سقف تكلفة شوبيفاي: ${Math.round(d.throttle.currentlyAvailable || 0)} / ${Math.round(d.throttle.maximumAvailable || 0)}</div>`;
+    }
     html += `<div style="margin-top:4px;font-weight:700;color:${d.allOk ? 'var(--green)' : 'var(--red)'}">${d.allOk ? '✓ كل الفحوصات سليمة' : '✗ في مشكلة محتاجة مراجعة'}</div>`;
     box.innerHTML = html;
   } catch (e) {
@@ -1862,6 +1947,9 @@ function showConfirm(message, onConfirm, opts = {}) {
   const newBtn = oldBtn.cloneNode(true);
   oldBtn.parentNode.replaceChild(newBtn, oldBtn);
   newBtn.textContent = opts.okText || 'تأكيد';
+  // v4.5.0 (Standards #38) — الزرار الأساسي في نافذة بحالة سلبية/نهائية بيبقى
+  // أحمر. الافتراضي زي ما هو، والاستدعاء هو اللي بيطلب اللون.
+  newBtn.className = opts.okClass ? `btn-confirm-ok ${opts.okClass}` : 'btn-confirm-ok';
   newBtn.addEventListener('click', () => { closeConfirm(); if (onConfirm) onConfirm(); });
   document.getElementById('confirmCancelBtn').style.display = opts.hideCancel ? 'none' : 'inline-flex';
   document.getElementById('confirmOverlay').classList.add('open');
@@ -1881,9 +1969,33 @@ function toggleSearchActiveState(el) {
   el.classList.toggle('has-value', el.value.trim().length > 0);
 }
 
-// ── Cairo time (UTC+3). Egypt DST ends 29-10-2026 → change to 2 ──
-const CAIRO_OFFSET_HOURS = 3;
-function toCairo(iso) { return new Date(new Date(iso).getTime() + CAIRO_OFFSET_HOURS * 3600 * 1000); }
+// ── ⏰ توقيت القاهرة — محسوب مش ثابت (v4.5.0) ──
+// الثابت القديم (CAIRO_OFFSET_HOURS = 3) كان بيغلط بساعة من 29-10-2026 من غير
+// ما يتغيّر سطر في الكود: كل وقت معروض، وكل حدود "فترة سريعة"، وكل حساب
+// "اليوم/أمس". نفس الدوال بالظبط في الـ Worker (§HELPERS::cairoTime).
+// ⚠️ toCairo() بترجّع Date **مزحزحة** عمدًا عشان باقي الكود يقرا منها بـ
+//    getUTC* — نفس عقد النسخة القديمة بالحرف، فمفيش أي استدعاء اتغيّر.
+const CAIRO_TZ = 'Africa/Cairo';
+const _cairoFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: CAIRO_TZ, hourCycle: 'h23',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+function cairoParts(d) {
+  const o = {};
+  for (const p of _cairoFmt.formatToParts(d)) if (p.type !== 'literal') o[p.type] = p.value;
+  if (o.hour === '24') o.hour = '00';
+  return o;
+}
+function cairoOffsetMinutes(d) {
+  const p = cairoParts(d);
+  return Math.round((Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - d.getTime()) / 60000);
+}
+function toCairo(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return new Date(NaN);
+  return new Date(d.getTime() + cairoOffsetMinutes(d) * 60000);
+}
 function cairoNow() { return toCairo(new Date().toISOString()); }
 function cairoDateStr(d) {
   const pad = n => String(n).padStart(2, '0');
@@ -2251,7 +2363,7 @@ async function doLogout() {
   clearLoginAlert();
 
   // ── CUSTOMIZE: tool-specific reset ─────────────────────────
-  orders = []; lastBatch = null; isUpdating = false;
+  orders = []; setUpdateLock(false);
   currentTargetLabel = ''; currentCourier = ''; step1Open = true;
   courierConfirmed = false; courierConfirmedOrderSnapshot = ''; courierPickerForced = false; lastCourierAlertKey = '';
   orderReasons = {};   // v4.0.0
@@ -2307,10 +2419,14 @@ const TRANSITION_RULES = {
   // Fulfilled الحالة الصح هي Returned مش Cancelled). لازم تفضل مطابقة لنسخة
   // الـ Worker — دي للتغذية الفورية بس، والـ Worker هو المرجع النهائي.
   Cancelled:   { s1From: ['Ready'], s2Blank: true },
-  Returned:    { s1From: ['Shipped'], s2Blank: true },
-  Ready_S2:    { s1From: ['Shipped', 'Delivered'], s2In: ['Confirmed + RETURN', 'Confirmed + EXCHANGE', 'Shipped'] },
+  // v4.5.0 🔓 — In-Return مصدر شرعي في الماكينتين (كانت ناقصة خالص، فأوردرات
+  // بوسطة كانت مقفولة نهائيًا). و S2: In-Return → Ready قرار أحمد 08-09-2026.
+  // ⚠️ S1: In-Return → Ready مش مضافة عمدًا — مش في الجدول المعتمد.
+  // لازم تفضل مطابقة حرفيًا لنسخة الـ Worker — دي للتغذية الفورية بس.
+  Returned:    { s1From: ['Shipped', 'In-Return'], s2Blank: true },
+  Ready_S2:    { s1From: ['Shipped', 'Delivered'], s2In: ['Confirmed + RETURN', 'Confirmed + EXCHANGE', 'Shipped', 'In-Return'] },
   Shipped_S2:  { s1From: ['Delivered'], s2In: ['Ready'] },
-  Returned_S2: { s1From: ['Delivered'], s2In: ['Shipped'] },
+  Returned_S2: { s1From: ['Delivered'], s2In: ['Shipped', 'In-Return'] },
 };
 
 const STATUS_PILL = {
@@ -2337,13 +2453,19 @@ let courierPickerForced = false; // true وقت الضغط على "🔄 تغيي
 let lastCourierAlertKey = '';
 let orders    = [];   // [orderId, ...] newest first
 const orderInfo = {}; // orderId → { name, s1, s2, courier, isCancelled } — courier فاضي = بدون مندوب
-let lastBatch = null;
 let isUpdating = false;
 let courierListCache = null;
 let ordersCollapsed = true; // §TOOL::ordersTable — auto-managed by applyAutoCollapseRule() (unless overridden)
 let ordersManualOverride = false; // بند 1، v3.2.0 — true بمجرد ما المستخدم يضغط زرار الطي يدوياً
 let orderReasons = {};        // orderId → سبب الإلغاء/الإرجاع المختار (v4.0.0) — سارٍ بس لما needsReasonFor() صح
 let reasonValuesCache = null; // { cancelReasons:[...], returnReasons:[...] } من reason_values (v4.0.0)، lazy-loaded
+// 🔴 v4.5.0 — الكاش كان **بلا انتهاء**: أول تحميل في التاب وخلاص. والقوايم
+// بتتعدّل من داشبورد شوبيفاي فعليًا (قايمة الإلغاء اتغيّرت مرتين في ٤ أيام)،
+// فالموظف اللي فاتح التاب من الصبح بيشوف قيم اتشالت — واختيار واحدة منها
+// كان بيلغي الأوردر وبعدين يفشل في كتابة الحالة (#52732، 03-09-2026).
+const VALUES_TTL_MS  = 10 * 60 * 1000;
+let reasonValuesAt   = 0;
+let courierListAt    = 0;
 function snapshotOrders() { return orders.slice().sort().join(','); }
 
 // ─── §TOOL-JS::resolution (mirrors Worker resolveSpecifier + isTransitionValid) ───
@@ -2365,6 +2487,7 @@ function isTransitionValid(specifier, s1, s2) {
 }
 function orderIsBlocked(id) {
   const st = orderInfo[id] || {};
+  if (st.unknown) return true;   // v4.5.0 — كود مش أوردر معروف على شوبيفاي
   if (st.isCancelled) return true;
   if (st.s1 === undefined || !currentTargetLabel) return false;
   const spec = clientResolveSpecifier(currentTargetLabel, st.s1, st.s2);
@@ -2373,7 +2496,7 @@ function orderIsBlocked(id) {
 
 function statusPill(v) {
   if (!v) return '<span class="pill-empty">—</span>';
-  return `<span class="pill ${STATUS_PILL[v] || 'p-mute'}">${v}</span>`;
+  return `<span class="pill ${STATUS_PILL[v] || 'p-mute'}">${escHtml(v)}</span>`;
 }
 
 // ─── §TOOL-JS::orderReasons (v4.0.0 — سبب الإلغاء/الإرجاع، إلزامي) ───
@@ -2429,11 +2552,12 @@ function currentReasonChoices() {
   return [];
 }
 
-async function ensureReasonValues() {
-  if (reasonValuesCache) return reasonValuesCache;
+async function ensureReasonValues(force = false) {
+  if (!force && reasonValuesCache && Date.now() - reasonValuesAt < VALUES_TTL_MS) return reasonValuesCache;
   try {
     const data = await apiGet('reason_values');
     reasonValuesCache = { cancelReasons: data.cancelReasons || [], returnReasons: data.returnReasons || [] };
+    reasonValuesAt = Date.now();
   } catch (e) {
     reasonValuesCache = { cancelReasons: [], returnReasons: [] };
     showToast(`تعذّر تحميل قائمة أسباب الإلغاء/الإرجاع: ${e.message}`, 'error');
@@ -2441,6 +2565,22 @@ async function ensureReasonValues() {
   return reasonValuesCache;
 }
 
+// ─── §TOOL-JS::escaping — v4.5.0 ───
+// قيم بتيجي من شوبيفاي (أسماء مناديب · أسباب · حالات) ومن D1 (أسماء موظفين)
+// وبتتحقن في innerHTML وفي onclick. من غير هروب: `&` أو `<` بيبوّظ العرض،
+// و`'` في اسم بيكسر الـ onclick بالكامل (الصف بيبقى شكله سليم ومابيعملش حاجة).
+function escHtml(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+// للاستخدام **جوّه** onclick="fn('...')" — الترتيب مقصود: هروب JS الأول
+// (backslash) وبعدين هروب HTML **من غير** ' — لأن الـ parser بيفكّ &#39; لـ '
+// قبل ما JS يشوفها، فيكسر السلسلة تاني.
+function escJsAttr(v) {
+  return String(v ?? '')
+    .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 function escAttr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
@@ -2462,14 +2602,17 @@ function reasonSelectHTML(id, choices) {
   // الأوردر عليه سبب فعلاً، وهو بالظبط العطل اللي الإصدار ده بيحله.
   const list = current && !choices.includes(current) ? [current, ...choices] : choices;
 
-  const opts = [`<option value="">${placeholder}</option>`]
-    .concat(list.map(c => `<option value="${escAttr(c)}" ${c === current ? 'selected' : ''}>${escAttr(c)}</option>`));
+  const opts = [`<option value="">${escHtml(placeholder)}</option>`]
+    .concat(list.map(c => `<option value="${escAttr(c)}" ${c === current ? 'selected' : ''}>${escHtml(c)}</option>`));
 
-  const select = `<select class="reason-select ${missing ? 'reason-missing' : ''}" ${loading ? 'disabled' : ''} onchange="setOrderReason('${id}', this.value)">${opts.join('')}</select>`;
+  const select = `<select class="reason-select ${missing ? 'reason-missing' : ''}" ${loading ? 'disabled' : ''} onchange="setOrderReason('${escJsAttr(id)}', this.value)">${opts.join('')}</select>`;
 
   // شارة المصدر — بتظهر بس لما السبب جاي من شوبيفاي والموظف ما بدّلوش.
-  if (!existing || picked) return select;
-  return `${select}<span class="reason-src" title="السبب مسجّل على الأوردر في شوبيفاي — تقدر تبدّله لو محتاج">📋 مسجّل مسبقًا</span>`;
+  // v4.5.0 — العنصر موجود **دايمًا** لما يكون فيه سبب مسجّل (مخفي لو الموظف
+  // بدّله)، عشان refreshReasonCell تقدر ترجّعه من غير إعادة بناء الصف. من غير
+  // كده، الرجوع لنفس القيمة الأصلية بعد تبديل كان بيخفي الشارة للأبد.
+  if (!existing) return select;
+  return `${select}<span class="reason-src"${picked ? ' style="display:none"' : ''} title="السبب مسجّل على الأوردر في شوبيفاي — تقدر تبدّله لو محتاج">📋 مسجّل مسبقًا</span>`;
 }
 
 function setOrderReason(id, value) {
@@ -2481,7 +2624,19 @@ function setOrderReason(id, value) {
   if (value && value !== existing) orderReasons[id] = value;
   else delete orderReasons[id];
   updateActionState();
-  renderOrders();
+  refreshReasonCell(id);   // v4.5.0 — الصف ده بس، مش الجدول كله
+}
+
+// v4.5.0 — كان `renderOrders()` كامل على كل اختيار سبب: الـ <select> بيضيع
+// تركيزه، وأي قايمة مفتوحة بتتقفل، وعلى قايمة كبيرة فيه تهنيج محسوس.
+// هنا بنلمس علامة "ناقص سبب" وشارة "مسجّل مسبقًا" بس — من غير أي إعادة بناء.
+function refreshReasonCell(id) {
+  const row = document.getElementById(`ordrow-${id}`);
+  if (!row) { renderOrders(); return; }
+  const sel = row.querySelector('.reason-select');
+  if (sel) sel.classList.toggle('reason-missing', !effectiveReasonFor(id));
+  const src = row.querySelector('.reason-src');
+  if (src) src.style.display = (existingReasonFor(id) && !orderReasons[id]) ? '' : 'none';
 }
 
 // ─── §TOOL-JS::tabs ───
@@ -2560,8 +2715,10 @@ function selectTargetLabel(label) {
 
   // v4.0.0 — تحميل قوائم أسباب الإلغاء/الإرجاع مقدّمًا (lazy، مرة واحدة لكل
   // جلسة) لو الحالة المختارة محتاجاها؛ الجدول بيتعاد رسمه بمجرد ما توصل.
+  // v4.5.0 — `force` مقصود: اختيار الحالة بيحصل مرة واحدة قبل كل دفعة تقريبًا،
+  // فده أرخص وأضمن مكان لتحديث القايمة من الـ TTL لوحده.
   if (needsReasonFor(label)) {
-    ensureReasonValues().then(() => { if (currentTargetLabel === label) renderOrders(); });
+    ensureReasonValues(true).then(() => { if (currentTargetLabel === label) renderOrders(); });
   }
 }
 
@@ -2573,11 +2730,12 @@ function reopenStep1(silent = false) {
 }
 
 // ─── §TOOL-JS::alt courier-search sub-panel ───
-async function ensureCourierList() {
-  if (courierListCache) return courierListCache;
+async function ensureCourierList(force = false) {
+  if (!force && courierListCache && Date.now() - courierListAt < VALUES_TTL_MS) return courierListCache;
   try {
     const data = await apiGet('courier_values');
     courierListCache = data.values || [];
+    courierListAt = Date.now();
   } catch (e) {
     courierListCache = [];
     showToast(`تعذّر تحميل قائمة المناديب: ${e.message}`, 'error');
@@ -2594,8 +2752,8 @@ function refreshAltSearchVisibility() {
 
 // بند 3، v3.2.0 — أول زرار في القايمة دايماً "🚫 بدون مندوب" (noCourier search)
 function courierGridButtonsHTML(list, onClickFn) {
-  const noneBtn = `<button class="courier-btn" style="border-style:dashed" onclick="${onClickFn}('__NONE__')">🚫 ${NO_COURIER_LABEL}</button>`;
-  return noneBtn + list.map(c => `<button class="courier-btn" onclick="${onClickFn}('${c.replace(/'/g, "\\'")}')">${c}</button>`).join('');
+  const noneBtn = `<button class="courier-btn" style="border-style:dashed" onclick="${onClickFn}('__NONE__')">🚫 ${escHtml(NO_COURIER_LABEL)}</button>`;
+  return noneBtn + list.map(c => `<button class="courier-btn" onclick="${onClickFn}('${escJsAttr(c)}')">${escHtml(c)}</button>`).join('');
 }
 
 async function toggleAltSearch() {
@@ -2652,7 +2810,7 @@ function renderCourierStep() {
     return a.localeCompare(b);
   });
 
-  const escQ = s => s.replace(/'/g, "\\'");
+  const escQ = escJsAttr;   // v4.5.0 — هروب موحّد (كان بيغطي ' بس، من غير \\ ولا HTML)
 
   // §TOOL-JS::groupTableHTML (بند 2/3، v3.4.0) — جدول بدل الأزرار الأفقية:
   // اسم المندوب | عدد الأوردرات | أرقام الأوردرات. صف "بدون مندوب" دايماً
@@ -2667,7 +2825,7 @@ function renderCourierStep() {
       const names = ids.map(id => orderLink(orderInfo[id]?.name || id, id)).join('، ');
       return `<tr class="${label === activeVal ? 'active' : ''} ${isBlocked ? 'blocked' : ''}"
                  ${isBlocked ? '' : `onclick="chooseCourier('${escQ(label)}')"`}>
-        <td class="ctbl-name">${label}${isBlocked ? ' <span class="mini-badge bad">غير متاح</span>' : ''}</td>
+        <td class="ctbl-name">${escHtml(label)}${isBlocked ? ' <span class="mini-badge bad">غير متاح</span>' : ''}</td>
         <td>${ids.length.toLocaleString('en-US')}</td>
         <td class="ctbl-orders" onclick="event.stopPropagation()">${names}</td>
       </tr>`;
@@ -2692,7 +2850,7 @@ function renderCourierStep() {
     step.classList.add('done');
     body.innerHTML = `
       <div class="courier-confirmed-wrap">
-        <span class="courier-confirmed-badge">🛵 ${currentCourier}</span>
+        <span class="courier-confirmed-badge">🛵 ${escHtml(currentCourier)}</span>
         <button class="btn-sm" onclick="openCourierPicker()">🔄 تغيير المندوب</button>
       </div>`;
     updateActionState();
@@ -2727,7 +2885,7 @@ function renderCourierStep() {
     body.innerHTML = `
       <div class="wiz-note">✓ الأوردرات المضافة كلها عليها نفس المندوب — أكّد أو غيّر:</div>
       <div class="courier-suggest-wrap">
-        <span class="courier-confirmed-badge suggest">🛵 ${only}</span>
+        <span class="courier-confirmed-badge suggest">🛵 ${escHtml(only)}</span>
         <div class="courier-suggest-btns">
           <button class="btn-sm go" onclick="chooseCourier('${escQ(only)}')">✅ تأكيد المندوب</button>
           <button class="btn-sm" onclick="openCourierPicker()">🔄 تغيير المندوب</button>
@@ -2769,7 +2927,7 @@ async function toggleStep3FullList() {
   const list = await ensureCourierList();
   if (!list.length) { grid.innerHTML = '<div class="courier-hint err">⚠️ لا توجد قائمة مناديب معرّفة</div>'; return; }
   grid.innerHTML = list.map(c =>
-    `<button class="courier-btn ${c===currentCourier?'active':''}" onclick="chooseCourier('${c.replace(/'/g, "\\'")}')">${c}</button>`
+    `<button class="courier-btn ${c===currentCourier?'active':''}" onclick="chooseCourier('${escJsAttr(c)}')">${escHtml(c)}</button>`
   ).join('');
 }
 
@@ -2781,7 +2939,7 @@ function chooseCourier(courier) {
   // كمندوب نهائي لتحديث أي أوردر. حارس هنا كنقطة دخول واحدة، حتى لو استُدعيت
   // الدالة برمجياً من مكان تاني.
   if (courier === NO_COURIER_LABEL) {
-    showToast('🚫 "بدون مندوب" مش مندوب حقيقي — اختر مندوب آخر لإكمال التحديث', 'error', 4000);
+    showToast('🚫 "بدون مندوب" مش مندوب حقيقي — اختر مندوب آخر لإكمال التحديث', 'warning', 4000);
     playBeep('warn');
     return;
   }
@@ -2807,8 +2965,8 @@ function chooseCourier(courier) {
   const rows = conflicting.map(oldC =>
     `<tr>
        <td style="text-align:center;font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border)">${grouped[oldC].length.toLocaleString('en-US')}</td>
-       <td style="text-align:center;padding:6px 8px;border-bottom:1px solid var(--border)">${oldC}</td>
-       <td style="text-align:center;padding:6px 8px;border-bottom:1px solid var(--border);color:var(--accent);font-weight:700">${courier}</td>
+       <td style="text-align:center;padding:6px 8px;border-bottom:1px solid var(--border)">${escHtml(oldC)}</td>
+       <td style="text-align:center;padding:6px 8px;border-bottom:1px solid var(--border);color:var(--accent);font-weight:700">${escHtml(courier)}</td>
      </tr>`
   ).join('');
 
@@ -2891,11 +3049,12 @@ scanInput.addEventListener('keypress', e => {
 function handleScan() {
   const val = scanInput.value.trim();
   scanInput.value = '';
+  if (isUpdating) { showToast('التحديث شغّال — استنى لحد ما يخلص', 'warning'); playBeep('warn'); return; }
   scanInput.focus();
   if (!val || val.length < 3) return;
 
-  if (!currentTargetLabel) { showToast('اختر الحالة المستهدفة أولاً', 'error'); playBeep('warn'); return; }
-  if (orders.includes(val)) { showToast(`⚠️ موجود بالفعل: ${val}`, 'error'); playBeep('warn'); return; }
+  if (!currentTargetLabel) { showToast('اختر الحالة المستهدفة أولاً', 'warning'); playBeep('warn'); return; }
+  if (orders.includes(val)) { showToast(`⚠️ موجود بالفعل: ${val}`, 'warning'); playBeep('warn'); return; }
 
   addOrders([val]);
   showToast('✓ تمت الإضافة', 'success');
@@ -2908,14 +3067,15 @@ async function addManualOrder() {
   const input = document.getElementById('manualInput');
   const btn   = document.getElementById('manualBtn');
   const raw   = input.value.trim().replace(/^#/, '');
+  if (isUpdating) { showToast('التحديث شغّال — استنى لحد ما يخلص', 'warning'); return; }
   if (!raw) { input.focus(); return; }
-  if (!currentTargetLabel) { showToast('اختر الحالة المستهدفة أولاً', 'error'); playBeep('warn'); return; }
+  if (!currentTargetLabel) { showToast('اختر الحالة المستهدفة أولاً', 'warning'); playBeep('warn'); return; }
 
   btn.disabled = true; input.disabled = true; btn.textContent = '⏳';
   try {
     const data = await apiPost('resolve_by_name', { orderName: '#' + raw });
-    if (data.notFound) { showToast(`⚠️ #${raw} غير موجود`, 'error'); playBeep('warn'); }
-    else if (orders.includes(data.orderId)) { showToast(`⚠️ موجود بالفعل: ${data.orderName}`, 'error'); playBeep('warn'); }
+    if (data.notFound) { showToast(`⚠️ #${raw} غير موجود`, 'warning'); playBeep('warn'); }
+    else if (orders.includes(data.orderId)) { showToast(`⚠️ موجود بالفعل: ${data.orderName}`, 'warning'); playBeep('warn'); }
     else {
       orderInfo[data.orderId] = { ...(orderInfo[data.orderId] || {}), name: data.orderName };
       addOrders([data.orderId]);
@@ -2948,6 +3108,7 @@ function addOrders(ids) {
 // بند 1، v3.2.0 — حذف أوردر ما بيغيّرش حالة الفتح/القفل المطلوبة من المستخدم؛
 // applyAutoCollapseRule() بترجع تتأكد بس من غياب أوردرات خطأ لو مفيش override يدوي.
 function removeOrder(id) {
+  if (isUpdating) return;   // v4.5.0 — القايمة مقفولة أثناء التحديث
   orders = orders.filter(o => o !== id);
   delete orderReasons[id];   // v4.0.0
   renderOrders();
@@ -2957,6 +3118,7 @@ function removeOrder(id) {
 }
 
 function clearOrders() {
+  if (isUpdating) { showToast('التحديث شغّال — استنى لحد ما يخلص', 'warning'); return; }
   if (!orders.length) return;
   showConfirm(`مسح كل الأوردرات (${orders.length.toLocaleString('en-US')}) من القائمة؟`, () => {
     orders = [];
@@ -2974,22 +3136,79 @@ function clearOrders() {
 // ─── §TOOL-JS::hydrateOrders ───
 // Pulls current S1/S2/courier + cancellation state so rows can be validated
 // and the courier auto-detected before update.
+// v4.5.0 — التقسيم إلزامي: "تحديد الكل" في بحث المندوب ممكن يضيف مئات
+// الأوردرات مرة واحدة، ونداء nodes(ids:) بالعدد ده بيترفض من شوبيفاي فترجع
+// **كل** الصفوف بلا حالة — وبلا حالة يعني بتعدّي فحص العميل وتتبعت للتحديث.
+const HYDRATE_CHUNK = 50;
+
 async function hydrateOrders(ids) {
-  try {
-    const data = await apiPost('order_statuses', { orderIds: ids });
-    let anyBad = false;
-    for (const [id, st] of Object.entries(data.statuses || {})) {
-      orderInfo[id] = { ...(orderInfo[id] || {}), ...st };
-      if (orders.includes(id) && orderIsBlocked(id)) anyBad = true;
+  let anyBad = false;
+  const unknown = [];
+  for (let i = 0; i < ids.length; i += HYDRATE_CHUNK) {
+    const chunk = ids.slice(i, i + HYDRATE_CHUNK);
+    try {
+      const data = await apiPost('order_statuses', { orderIds: chunk });
+      const got  = new Set(Object.keys(data.statuses || {}));
+      for (const [id, st] of Object.entries(data.statuses || {})) {
+        orderInfo[id] = { ...(orderInfo[id] || {}), ...st, unknown: false };
+        if (orders.includes(id) && orderIsBlocked(id)) anyBad = true;
+      }
+      // 🟠 v4.5.0 — الـ IDs اللي شوبيفاي **ما رجّعتهاش**. قبل كده كانت بتتجاهل
+      // خالص: الصف يظهر بـ #— بلا أي بادج، و orderIsBlocked ترجّع false (لأن
+      // s1 === undefined)، فيعدّي على "تحديث الكل" ويرجع "الأوردر غير موجود".
+      // ٧ مرات في السجل. دلوقتي بيتوسم بصريًا وبيمنع التحديث.
+      for (const id of chunk) if (!got.has(id)) {
+        orderInfo[id] = { ...(orderInfo[id] || {}), unknown: true };
+        unknown.push(id);
+      }
+    } catch (e) {
+      showToast(`تعذّر جلب حالة الأوردرات: ${e.message}`, 'error', 6000);
     }
-    renderOrders();
-    renderCourierStep();
-    applyAutoCollapseRule();
-    updateActionState();
-    if (anyBad) playBeep('warn');
-  } catch (e) {
-    showToast(`تعذّر جلب حالة الأوردرات: ${e.message}`, 'error');
   }
+
+  renderOrders();
+  renderCourierStep();
+  applyAutoCollapseRule();
+  updateActionState();
+
+  if (unknown.length) {
+    playBeep('error');
+    if (navigator.vibrate) navigator.vibrate([90, 60, 90]);
+    showUnknownCodesDialog(unknown);
+  } else if (anyBad) {
+    playBeep('warn');
+  }
+}
+
+// ─── §TOOL-JS::unknownCodes — v4.5.0 ───
+// نافذة صريحة بنفس أسلوب نافذة "أوردرات غير مطابقة" — الأكواد المجهولة مش
+// مجرد توست بيختفي. زرار التأكيد بيشيلهم من القايمة على طول.
+function showUnknownCodesDialog(ids) {
+  ordersCollapsed = false;
+  renderOrdersCollapseUI();
+  const shown = ids.slice(0, 12).join('، ');
+  showToast(`❌ ${ids.length.toLocaleString('en-US')} كود مش أوردر معروف على شوبيفاي`, 'error', 5000);
+  showConfirm(
+    `الأكواد دي **مش** أوردرات معروفة على شوبيفاي — غالبًا لاصقة غلط ` +
+    `(باركود منتج · AWB بوسطة · لاصقة قديمة):\n\n${shown}` +
+    (ids.length > 12 ? `\n... و${(ids.length - 12).toLocaleString('en-US')} غيرهم` : '') +
+    `\n\nمتعلّمين بالأحمر في الجدول، والتحديث مقفول لحد ما يتشالوا.`,
+    () => removeUnknownOrders(),
+    { okText: '🗑 شيلهم من القايمة', okClass: 'btn-red' }
+  );
+}
+
+function removeUnknownOrders() {
+  const gone = orders.filter(id => orderInfo[id]?.unknown);
+  if (!gone.length) return;
+  orders = orders.filter(id => !orderInfo[id]?.unknown);
+  gone.forEach(id => { delete orderReasons[id]; delete orderInfo[id]; });
+  renderOrders();
+  renderCourierStep();
+  applyAutoCollapseRule();
+  updateActionState();
+  showToast(`تم شيل ${gone.length.toLocaleString('en-US')} كود مجهول`, 'success');
+  focusScan();
 }
 
 // ─── §TOOL-JS::ordersTable collapse (بند 1، v3.2.0 — وسّعت v4.2.0) ───
@@ -3037,7 +3256,11 @@ function renderOrders(flashFirst = false) {
     const spec  = currentTargetLabel ? clientResolveSpecifier(currentTargetLabel, info.s1, info.s2) : null;
     let cls = '', badge = '';
 
-    if (info.isCancelled) {
+    if (info.unknown) {
+      // v4.5.0 — الكود ده مش أوردر معروف على شوبيفاي (لاصقة غلط غالبًا)
+      cls = 'row-unknown';
+      badge = '<span class="mini-badge bad">❓ كود مش أوردر معروف على Shopify</span>';
+    } else if (info.isCancelled) {
       cls = 'row-cancelled';
       badge = '<span class="mini-badge bad">❌ ملغي على Shopify</span>';
     } else if (known && currentTargetLabel && (!spec || !isTransitionValid(spec, info.s1, info.s2))) {
@@ -3050,7 +3273,7 @@ function renderOrders(flashFirst = false) {
     const pathTag = spec
       ? `<span class="pill ${spec.endsWith('_S2') ? 'p-amber' : 'p-accent'}">${spec.endsWith('_S2') ? 'S2' : 'S1'}</span>`
       : '<span class="pill-empty">—</span>';
-    const courierBadge = info.courier ? `<span class="pill p-purple">🛵 ${info.courier}</span>` : '<span class="pill-empty">—</span>';
+    const courierBadge = info.courier ? `<span class="pill p-purple">🛵 ${escHtml(info.courier)}</span>` : '<span class="pill-empty">—</span>';
     // v4.1.0 — العمود بيظهر لكل صفوف الجدول لما الحالة المستهدفة Cancelled/Returned
     // (showReason)، بس السبب إلزامي/بيتعرض بس للصفوف اللي فعليًا هتتحل S1
     // (rowNeedsReason — نفس spec المحسوب فوق، مفيش نداء تاني). صف S2 بيوري
@@ -3058,11 +3281,13 @@ function renderOrders(flashFirst = false) {
     const rowNeedsReason = spec === 'Cancelled' || spec === 'Returned';
     const reasonCell = showReason
       ? (rowNeedsReason
-          ? `<td onclick="event.stopPropagation()">${reasonSelectHTML(id, reasonChoices)}</td>`
-          : `<td class="reason-na">— (S2، غير مطلوب) —</td>`)
+          ? `<td class="c-reason" onclick="event.stopPropagation()">${reasonSelectHTML(id, reasonChoices)}</td>`
+          : `<td class="c-reason reason-na">— (S2، غير مطلوب) —</td>`)
       : '';
 
-    return `<tr class="${cls}">
+    // v4.5.0 — معرّف للصف عشان setOrderReason تحدّث **الصف بتاعه بس** بدل ما
+    // تعيد بناء الجدول كله (كانت بتضيّع تركيز الـ select وتقفل أي قايمة مفتوحة).
+    return `<tr class="${cls}" id="ordrow-${escAttr(id)}">
       <td class="c-del"><button class="del-x" onclick="removeOrder('${id}')">✕</button></td>
       <td>${i + 1}</td>
       <td class="c-name">${orderLink(info.name, id)}${badge}</td>
@@ -3090,21 +3315,26 @@ function renderOrders(flashFirst = false) {
 function startUpdate() {
   if (isUpdating) return;
   const cfg = TARGET_LABELS[currentTargetLabel];
-  if (!cfg) { showToast('اختر الحالة المستهدفة أولاً', 'error'); return; }
-  if (cfg.needsCourier && (!courierConfirmed || !currentCourier)) { showToast('أكّد المندوب أولاً', 'error'); return; }
-  if (cfg.needsCourier && currentCourier === NO_COURIER_LABEL) { showToast('🚫 "بدون مندوب" مينفعش يتأكد كمندوب نهائي', 'error'); return; }
-  if (!orders.length) { showToast('لا توجد أوردرات', 'error'); return; }
+  if (!cfg) { showToast('اختر الحالة المستهدفة أولاً', 'warning'); return; }
+  if (cfg.needsCourier && (!courierConfirmed || !currentCourier)) { showToast('أكّد المندوب أولاً', 'warning'); return; }
+  if (cfg.needsCourier && currentCourier === NO_COURIER_LABEL) { showToast('🚫 "بدون مندوب" مينفعش يتأكد كمندوب نهائي', 'warning'); return; }
+  if (!orders.length) { showToast('لا توجد أوردرات', 'warning'); return; }
+
+  // v4.5.0 — الأكواد المجهولة ليها نافذتها الخاصة برسالة مختلفة تمامًا
+  // (لاصقة غلط ≠ انتقال غير مسموح)، وزرار بيشيلهم بضغطة.
+  const unknownIds = orders.filter(id => orderInfo[id]?.unknown);
+  if (unknownIds.length) { showUnknownCodesDialog(unknownIds); return; }
 
   const blocked = orders.filter(orderIsBlocked);
   if (blocked.length) {
     const names = blocked.slice(0, 12).map(id => orderInfo[id]?.name || id).join('، ');
-    showToast(`⚠️ ${blocked.length} أوردر غير مطابق — احذفهم أولاً`, 'error', 5000);
+    showToast(`⚠️ ${blocked.length} أوردر غير مطابق — احذفهم أولاً`, 'warning', 5000);
     playBeep('warn');
     showConfirm(
       `لا يمكن التحديث. الأوردرات التالية لا تتوافق مع قواعد الانتقال إلى "${currentTargetLabel}":\n\n${names}` +
       (blocked.length > 12 ? `\n... و${blocked.length - 12} غيرهم` : '') +
       `\n\nاحذفهم من القائمة ثم أعد المحاولة.`,
-      null, { hideCancel: true, okText: 'تم' }
+      null, { hideCancel: true, okText: 'تم', okClass: 'btn-red' }
     );
     return;
   }
@@ -3123,13 +3353,13 @@ function startUpdate() {
     renderOrdersCollapseUI();
 
     const names = missingReason.slice(0, 12).map(id => orderInfo[id]?.name || id).join('، ');
-    showToast(`⚠️ اختر سبب الإلغاء/الإرجاع لـ ${missingReason.length.toLocaleString('en-US')} أوردر أولاً`, 'error', 4000);
+    showToast(`⚠️ اختر سبب الإلغاء/الإرجاع لـ ${missingReason.length.toLocaleString('en-US')} أوردر أولاً`, 'warning', 4000);
     playBeep('warn');
     showConfirm(
       `لازم تختار سبب الإلغاء/الإرجاع للأوردرات التالية قبل التحديث:\n\n${names}` +
       (missingReason.length > 12 ? `\n... و${(missingReason.length - 12).toLocaleString('en-US')} غيرهم` : '') +
       `\n\nالجدول اتفتح تلقائيًا — اختار سبب من القائمة جنب كل أوردر ثم أعد المحاولة.`,
-      null, { hideCancel: true, okText: 'تم' }
+      null, { hideCancel: true, okText: 'تم', okClass: 'btn-red' }
     );
     return;
   }
@@ -3139,8 +3369,28 @@ function startUpdate() {
   showConfirm(msg, doStartUpdate);
 }
 
+// ─── §TOOL-JS::updateLock — v4.5.0 🔴 ───
+// القايمة كانت بتتقرا **حية** جوّه اللوب (`orders.slice(i, i+CHUNK)`)، و4 نقط
+// بتعدّلها من غير أي حارس: السكانر · الإضافة اليدوية · زرار ✕ · مسح الكل.
+// و addOrders بتعمل `orders = fresh.concat(orders)` يعني **بتزحزح كل العناصر**:
+// الأوردر على حدود التقسيم بيتبعت مرتين (والتانية بترجع "انتقال غير مسموح"
+// فيتحسب فشل وهو ناجح)، واللي بعده **بيتخطّى خالص** بلا أي رسالة، وشريط
+// التقدم بيرجع لورا. الحل: لقطة ثابتة + قفل الإدخال طول التحديث.
+function setUpdateLock(locked) {
+  isUpdating = locked;
+  const scan = document.getElementById('scanInput');
+  const man  = document.getElementById('manualInput');
+  const mbtn = document.getElementById('manualBtn');
+  if (scan) { scan.disabled = locked; scan.placeholder = locked ? '⏳ التحديث شغّال — استنى...' : 'امسح الباركود هنا...'; }
+  if (man)  man.disabled  = locked;
+  if (mbtn) mbtn.disabled = locked;
+  document.querySelectorAll('#ordersWrap .del-x').forEach(b => b.disabled = locked);
+}
+
 async function doStartUpdate() {
-  isUpdating = true;
+  setUpdateLock(true);
+  // 🔒 لقطة القايمة — كل اللوب بيشتغل عليها هي، مش على `orders` الحية
+  const batchOrders = orders.slice();
   const cfg = TARGET_LABELS[currentTargetLabel];
   const needsReason = needsReasonFor(currentTargetLabel);   // v4.0.0
   const btn = document.getElementById('updateBtn');
@@ -3158,8 +3408,8 @@ async function doStartUpdate() {
   // هنا سطر أمان إضافي بس، مش مسار متوقع فعلياً.
   const courierToSend = currentCourier === NO_COURIER_LABEL ? '' : currentCourier;
 
-  for (let i = 0; i < orders.length; i += UPDATE_CHUNK) {
-    const chunk = orders.slice(i, i + UPDATE_CHUNK);
+  for (let i = 0; i < batchOrders.length; i += UPDATE_CHUNK) {
+    const chunk = batchOrders.slice(i, i + UPDATE_CHUNK);
     try {
       const body = {
         orderIds:    chunk,
@@ -3196,13 +3446,12 @@ async function doStartUpdate() {
       batchError = batchError || e.message;
     }
     done += chunk.length;
-    document.getElementById('progBar').style.width = `${(done / orders.length) * 100}%`;
+    document.getElementById('progBar').style.width = `${(done / batchOrders.length) * 100}%`;
   }
 
-  lastBatch = { batchId, targetLabel: currentTargetLabel, courier: currentCourier, orderIds: succeeded };
   logLoaded = false;
 
-  isUpdating = false;
+  setUpdateLock(false);
   btn.textContent = '🚀 تحديث الكل';
 
   // ── تنظيف القائمة: الأوردرات اللي اتحدّثت فعلاً (ناجح أو تحذير) بتخرج من
@@ -3268,7 +3517,11 @@ function showUpdateSummary({ targetLabel, courier, okCount, warnCount, errCount,
   let alertHtml = '', alertCls = '';
   if (errCount) {
     alertHtml = `${errCount.toLocaleString('en-US')} أوردر ما اتحدّثوش وفضلوا في القائمة زي ما هم` +
-                (batchError ? `<br>سبب فشل الاتصال: ${batchError}` : '') +
+                // v4.5.0 — انقطاع اتصال **بعد** ما الـ Worker نفّذ الكتابة بيدّي
+                // نفس شكل الفشل بالظبط. إعادة المحاولة على طول بترجّع "انتقال
+                // غير مسموح" للكل وتخلي الموظف يفتكر إن الأداة باظت.
+                (batchError ? `<br>سبب فشل الاتصال: ${escHtml(batchError)}` +
+                              `<br>⚠️ لو الفشل ده اتصال (مش رفض من شوبيفاي)، <b>راجع تاب السجل الأول</b> — يمكن التحديث اتنفّذ فعلاً قبل ما الرد يوصل.` : '') +
                 `<br>افتح «تفاصيل الأوردرات» لمعرفة سبب كل واحد.`;
     alertCls = '';
   } else if (warnCount) {
@@ -3287,9 +3540,23 @@ function showUpdateSummary({ targetLabel, courier, okCount, warnCount, errCount,
     (targetLabel === 'Shipped' && summaryState.printableIds.length) ? 'inline-flex' : 'none';
 
   document.getElementById('summaryOverlay').classList.add('open');
+  // ─── v4.5.0 🟡 — التركيز والكيبورد ───
+  // الأداة سكانر-أول: ٤٣٨ دفعة في ١٦ يوم. النافذة دي بتتفتح بعد **كل** دفعة،
+  // وبتغطي مربع السكان، والتركيز ضايع من ساعة الضغط على زرار التأكيد — يعني
+  // أول سكانة بعد الدفعة كانت **بتضيع في السكوت** (الحروف بتروح على body).
+  // دلوقتي الزرار الأساسي بياخد التركيز، و Enter/Esc بيقفلوا النافذة.
+  const primary = document.querySelector('#summaryOverlay .btn-sum.primary');
+  if (primary) primary.focus();
+  document.addEventListener('keydown', summaryKeyHandler);
+}
+
+function summaryKeyHandler(e) {
+  if (!document.getElementById('summaryOverlay').classList.contains('open')) return;
+  if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); summaryStartFresh(); }
 }
 
 function closeUpdateSummary() {
+  document.removeEventListener('keydown', summaryKeyHandler);
   document.getElementById('summaryOverlay').classList.remove('open');
 }
 
@@ -3319,7 +3586,6 @@ function summaryStartFresh() {
   courierPickerForced = false;
   lastCourierAlertKey = '';
   step1Open = true;
-  lastBatch = null;
 
   renderStep1Body();                                  // بيعيد بناء شبكة اختيار الحالة
   document.getElementById('wizStep2').classList.add('wiz-locked');
@@ -3360,7 +3626,11 @@ async function openCourierSearch(courierName) {
       targetLabel: currentTargetLabel,
     });
     csmResults = (data.orders || []).filter(o => !o.isCancelled).map(o => ({ ...o, courier: isNone ? '' : courierName }));
-    if (data.truncated) document.getElementById('csmWarn').style.display = 'block';
+    if (data.truncated) {
+      const w = document.getElementById('csmWarn');
+      w.textContent = `⚠️ وصلنا للحد الأقصى (${(data.cap || 0).toLocaleString('en-US')} أوردر) — ممكن يكون فيه نتايج تانية ما ظهرتش. ضيّق البحث أو استخدم السكانر.`;
+      w.style.display = 'block';
+    }
     renderCourierSearch();
   } catch (e) {
     closeCourierSearch();
@@ -3412,8 +3682,9 @@ function csmUpdateCount() {
 }
 
 function csmAddSelected() {
+  if (isUpdating) { showToast('التحديث شغّال — استنى لحد ما يخلص', 'warning'); return; }
   const picked = [...document.querySelectorAll('.csm-cb:checked')].map(c => c.value);
-  if (!picked.length) { showToast('اختر أوردر واحد على الأقل', 'error'); return; }
+  if (!picked.length) { showToast('اختر أوردر واحد على الأقل', 'warning'); return; }
 
   picked.forEach(id => {
     // v4.2.1 — كان `r.id`؛ الـ Worker بيرجّع الحقل باسم orderId من v3.7.0
@@ -3426,7 +3697,7 @@ function csmAddSelected() {
   const added = orders.length - before;
 
   if (added) { showToast(`✅ تمت إضافة ${added} أوردر`, 'success'); playBeep('scan'); }
-  else showToast('كل الأوردرات المحددة موجودة بالفعل', 'error');
+  else showToast('كل الأوردرات المحددة موجودة بالفعل', 'warning');
   closeCourierSearch();
 }
 
@@ -3452,11 +3723,11 @@ async function printManifest(orderIds, courier) {
     const cod = Math.round(parseFloat(d.cod || 0));
     return `<tr>
       <td style="text-align:center;font-weight:600">${i + 1}</td>
-      <td style="font-weight:700;color:var(--accent);white-space:nowrap">${d.orderName || '—'}</td>
+      <td style="font-weight:700;color:#2563eb;white-space:nowrap">${escHtml(d.orderName || '—')}</td>
       <td style="text-align:center"><svg id="bc-${i}" style="display:block;margin:auto;shape-rendering:crispEdges"></svg></td>
-      <td>${d.customerName || '—'}</td>
-      <td style="text-align:center;direction:ltr;white-space:nowrap">${d.phone || '—'}</td>
-      <td style="font-size:9.5px">${d.address || '—'}</td>
+      <td>${escHtml(d.customerName || '—')}</td>
+      <td style="text-align:center;direction:ltr;white-space:nowrap">${escHtml(d.phone || '—')}</td>
+      <td style="font-size:9.5px">${escHtml(d.address || '—')}</td>
       <td style="text-align:left;font-weight:700;direction:ltr;white-space:nowrap">${cod.toLocaleString('en-US')}</td>
     </tr>`;
   }).join('');
@@ -3466,7 +3737,7 @@ async function printManifest(orderIds, courier) {
   ).join('\n');
 
   const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
-<title>Manifest — ${courier} — ${date}</title>
+<title>Manifest — ${escHtml(courier)} — ${date}</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"><\/script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -3493,7 +3764,7 @@ svg rect,svg path{shape-rendering:crispEdges}
 <div class="mh"><div>
   <div class="mt">📦 Manifest — بيان شحن</div>
   <div class="mm">
-    <div class="mi"><span class="ml">المندوب</span><span class="mv">${courier}</span></div>
+    <div class="mi"><span class="ml">المندوب</span><span class="mv">${escHtml(courier)}</span></div>
     <div class="mi"><span class="ml">التاريخ</span><span class="mv">${date}</span></div>
     <div class="mi"><span class="ml">عدد الأوردرات</span><span class="mv">${orderIds.length}</span></div>
     <div class="mi"><span class="ml">إجمالي COD</span><span class="mv" style="direction:ltr">${Math.round(totalCOD).toLocaleString('en-US')} EGP</span></div>
@@ -3510,7 +3781,7 @@ svg rect,svg path{shape-rendering:crispEdges}
   <tbody>${rows}</tbody>
 </table>
 <div class="mf">
-  <div><div style="font-size:13px;color:var(--text-secondary)">إجمالي التحصيل</div>
+  <div><div style="font-size:13px;color:#6b7280">إجمالي التحصيل</div>
     <div class="tv">${Math.round(totalCOD).toLocaleString('en-US')} EGP</div></div>
   <div class="sb">توقيع المندوب<br><br><br></div>
   <div class="sb">توقيع المستلم<br><br><br></div>
@@ -3519,7 +3790,15 @@ svg rect,svg path{shape-rendering:crispEdges}
 setTimeout(function(){window.print()},400)};<\/script>
 </body></html>`;
 
+  // v4.5.0 — المتصفح بيرجّع null لو منع النافذة المنبثقة، والسطر اللي بعده كان
+  // بيرمي TypeError مش متمسك في أي مكان: **مفيش أي حاجة بتحصل ولا رسالة**،
+  // والموظف بيفتكر إن المانفيست اتطبع والمندوب بيمشي من غيره.
   const win = window.open('', '_blank');
+  if (!win) {
+    showToast('المتصفح منع نافذة الطباعة — اسمح بالنوافذ المنبثقة (Pop-ups) للموقع ده وجرّب تاني', 'error', 8000);
+    playBeep('error');
+    return;
+  }
   win.document.write(html);
   win.document.close();
 }
@@ -3535,6 +3814,10 @@ let logTotalCount   = 0;
 let logSearchTimer  = null;
 let logFiltersOpen  = true;
 let selectedLogBatches = new Set(); // §LOG-JS::printSelectedBatches — batchId set
+// v4.5.0 — الحجم الكامل لكل دفعة من الـ Worker (batchId → عدد الصفوف الكلي).
+// الصفحة ١٠٠ صف، فالدفعة الواقعة على الحد كانت بتتعرض **مجموعتين في صفحتين**
+// بعدادات مقسومة وزرار طباعة بيطبع نصها — من غير أي إشارة إنها ناقصة.
+let logBatchSizes = {};
 
 function toggleLogFilters() {
   logFiltersOpen = !logFiltersOpen;
@@ -3607,9 +3890,12 @@ function msRenderList(key) {
     : visible.map(it => {
         const checked = st.selected.has(it.value);
         const labelCls = it.mono ? 'ms-item-label ms-item-mono' : 'ms-item-label';
-        return `<div class="ms-item ${checked ? 'checked' : ''}" onclick="msToggleItem('${key}','${it.value}')">
-          <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation(); msToggleItem('${key}','${it.value}')">
-          <span class="${labelCls}">${it.label}</span>
+        // v4.5.0 — الهروب كان في renderChips بس. اسم مندوب أو موظف فيه `'`
+        // كان بيكسر الـ onclick هنا: العنصر شكله سليم ومابيعملش حاجة خالص.
+        const v = escJsAttr(it.value);
+        return `<div class="ms-item ${checked ? 'checked' : ''}" onclick="msToggleItem('${escJsAttr(key)}','${v}')">
+          <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation(); msToggleItem('${escJsAttr(key)}','${v}')">
+          <span class="${labelCls}">${escHtml(it.label)}</span>
         </div>`;
       }).join('');
 
@@ -3631,7 +3917,7 @@ function msUpdateButtonLabel(key) {
   const n = st.selected.size;
   btn.classList.toggle('has-selection', n > 0);
   if (n === 0)       lbl.textContent = MS_DEFAULT_LABEL[key] || 'الكل';
-  else if (n === 1)  lbl.textContent = [...st.selected].map(v => (st.items.find(it=>it.value===v)||{}).label || v)[0];
+  else if (n === 1)  lbl.textContent = [...st.selected].map(v => (st.items.find(it=>it.value===v)||{}).label || v)[0];   // textContent — آمن
   else               lbl.innerHTML   = `${n} محددين <span class="ms-count">${n}</span>`;
 }
 
@@ -3692,7 +3978,7 @@ function renderChips() {
     if (!row) return;
     const chips = [...msState[key].selected].map(val => {
       const label = (msState[key].items.find(it => it.value === val) || {}).label || val;
-      return `<span class="ms-chip">${label}<button onclick="msToggleItem('${key}','${val.replace(/'/g, "\\'")}')">✕</button></span>`;
+      return `<span class="ms-chip">${escHtml(label)}<button onclick="msToggleItem('${escJsAttr(key)}','${escJsAttr(val)}')">✕</button></span>`;
     }).join('');
     row.innerHTML = chips ? `<span class="ms-chips-label">${MS_CHIPS_LABEL[key] || key}:</span>${chips}` : '';
   });
@@ -3887,6 +4173,7 @@ async function fetchLog() {
       apiGet('get_logs_count', filterParams),
     ]);
     logTotalCount = countData.total || 0;
+    logBatchSizes = pageData.batchSizes || {};   // v4.5.0 — كشف الدفعة المقسومة
     logLoaded     = true;
     document.getElementById('logFilteredCount').textContent = logTotalCount.toLocaleString('en-US');
     renderLog(pageData.entries || []);
@@ -3955,8 +4242,10 @@ function renderLog(entries) {
 
   window.__logGroups = groups;
 
-  const knownKeys = new Set(groups.map(g => g.key));
-  [...selectedLogBatches].forEach(k => { if (!knownKeys.has(k)) selectedLogBatches.delete(k); });
+  // v4.5.0 — التحديد **مابيتمسحش** مع تغيير الصفحة. كان بيتمسح بصمت، فاللي
+  // بيحدد في صفحة ١ ويروح ٢ ويرجع بيلاقي اختياره راح. الطباعة/التصدير لسه
+  // بيشتغلوا على الصفحة الحالية (البيانات مش محمّلة لغيرها)، وده بيتقال صراحةً
+  // في السطر التحذيري تحت العدّاد بدل ما يتخفي.
 
   const rowsHtml = groups.map((g, gi) => {
     const ok   = g.rows.filter(r => r.extra.result === 'success').length;
@@ -3964,6 +4253,12 @@ function renderLog(entries) {
     const err  = g.rows.length - ok - warn;
     const canPrint = g.targetLabel === 'Shipped' && ok > 0;
     const checked = selectedLogBatches.has(g.key);
+    // v4.5.0 — الدفعة المقسومة على صفحتين: العدد الكامل جاي من الـ Worker.
+    const fullSize = logBatchSizes[g.key] || 0;
+    const isSplit  = fullSize > g.rows.length;
+    const splitBadge = isSplit
+      ? `<span class="split-badge" title="الدفعة دي متقسّمة على أكتر من صفحة — الأرقام والطباعة هنا للجزء الظاهر بس">✂ ${g.rows.length.toLocaleString('en-US')} من ${fullSize.toLocaleString('en-US')}</span>`
+      : '';
 
     const detailRows = g.rows.map(r => {
       const res = r.extra.result;
@@ -3974,19 +4269,19 @@ function renderLog(entries) {
         <td>${orderLink(r.entry.order_name || r.entry.order_id, r.entry.order_id)}</td>
         <td>${fieldTag}</td>
         <td class="${resCls}">${resText}</td>
-        <td>${r.entry.notes || '—'}</td>
+        <td>${escHtml(r.entry.notes || '—')}</td>
       </tr>`;
     }).join('');
 
     return `<tr class="log-batch-row" id="lbr-${gi}" onclick="toggleBatch(${gi})">
       <td onclick="event.stopPropagation()">
         <input type="checkbox" class="log-cb" ${checked ? 'checked' : ''}
-          onchange="toggleLogBatchSelect('${g.key}', this.checked)" title="تحديد للتصدير أو الطباعة المجمّعة">
+          onchange="toggleLogBatchSelect('${escJsAttr(g.key)}', this.checked)" title="تحديد للتصدير أو الطباعة المجمّعة">
       </td>
       <td>${formatDateTime(g.timestamp)}</td>
-      <td>${g.targetLabel ? `<span class="pill p-purple">${TARGET_LABELS[g.targetLabel]?.icon || '🎯'} ${g.targetLabel}</span>` : '—'}</td>
-      <td>${g.courier ? `<span class="log-tag cr">🛵 ${g.courier}</span>` : '—'}</td>
-      <td>${g.employee ? `<span class="log-tag emp">👤 ${g.employee.replace(/_/g, ' ')}</span>` : '—'}</td>
+      <td>${g.targetLabel ? `<span class="pill p-purple">${TARGET_LABELS[g.targetLabel]?.icon || '🎯'} ${escHtml(g.targetLabel)}</span>` : '—'}${splitBadge}</td>
+      <td>${g.courier ? `<span class="log-tag cr">🛵 ${escHtml(g.courier)}</span>` : '—'}</td>
+      <td>${g.employee ? `<span class="log-tag emp">👤 ${escHtml(g.employee.replace(/_/g, ' '))}</span>` : '—'}</td>
       <td class="log-ok">✓${ok}</td>
       <td>${warn ? `<span class="log-warn">⚠${warn}</span>` : '—'}</td>
       <td>${err ? `<span class="log-err">✗${err}</span>` : '—'}</td>
@@ -4038,6 +4333,15 @@ function updatePrintSelectedUI() {
   const groups = window.__logGroups || [];
   const selected = groups.filter(g => selectedLogBatches.has(g.key));
   const n = selected.length;
+  // v4.5.0 — التحديد بيفضل عبر الصفحات، بس الطباعة/التصدير على الصفحة الحالية
+  // بس (بيانات باقي الصفحات مش محمّلة). الفرق بيتقال بدل ما يتخفي.
+  const offPage = Math.max(0, selectedLogBatches.size - n);
+  const hint = document.getElementById('logSelHint');
+  if (hint) {
+    hint.textContent = offPage
+      ? `(${offPage.toLocaleString('en-US')} محددة في صفحات تانية — الطباعة والتصدير بيشتغلوا على الصفحة دي بس)` : '';
+    hint.style.display = offPage ? '' : 'none';
+  }
 
   document.getElementById('logSelCount').textContent = n.toLocaleString('en-US');
   document.getElementById('logExportSelCount').textContent = n.toLocaleString('en-US');
@@ -4059,7 +4363,7 @@ function printSelectedBatches() {
     g.rows.filter(r => r.extra.result === 'success').forEach(r => { if (r.entry.order_id) ids.push(r.entry.order_id); });
     if (g.courier) couriers.add(g.courier);
   });
-  if (!ids.length) { showToast('لا توجد أوردرات ناجحة في العمليات المحددة', 'error'); return; }
+  if (!ids.length) { showToast('لا توجد أوردرات ناجحة في العمليات المحددة', 'warning'); return; }
 
   const courierLabel = couriers.size === 1 ? [...couriers][0] : `${couriers.size} مناديب`;
   printManifest(ids, courierLabel);
@@ -4070,7 +4374,7 @@ function printBatch(i) {
   if (!g) return;
   const ids = g.rows.filter(r => r.extra.result === 'success')
                     .map(r => r.entry.order_id).filter(Boolean);
-  if (!ids.length) { showToast('لا توجد أوردرات ناجحة للطباعة', 'error'); return; }
+  if (!ids.length) { showToast('لا توجد أوردرات ناجحة للطباعة', 'warning'); return; }
   printManifest(ids, g.courier || '—');
 }
 
@@ -4088,7 +4392,7 @@ async function loadEmployeeFilter() {
 
 // ─── §LOG-JS::buildAndDownloadWorkbook — shared by exportLogXLSX / exportSelectedLogXLSX ───
 async function buildAndDownloadWorkbook(entries, filenameSuffix) {
-  if (!entries.length) { showToast('لا توجد بيانات للتصدير', 'error'); return false; }
+  if (!entries.length) { showToast('لا توجد بيانات للتصدير', 'warning'); return false; }
 
   const wb = new ExcelJS.Workbook();
   wb.views = [{ rightToLeft: true }];
@@ -4150,7 +4454,8 @@ async function buildAndDownloadWorkbook(entries, filenameSuffix) {
   a.href = url;
   a.download = `order-status-log-${filenameSuffix}-${new Date().toISOString().slice(0, 10)}.xlsx`;
   a.click();
-  URL.revokeObjectURL(url);
+  // v4.5.0 — الإلغاء الفوري ممكن يوقف التنزيل نفسه في بعض المتصفحات
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
   return true;
 }
 
@@ -4198,7 +4503,7 @@ async function exportSelectedLogXLSX() {
   const groups = window.__logGroups || [];
   const selected = groups.filter(g => selectedLogBatches.has(g.key));
   const entries = selected.flatMap(g => g.rows.map(r => r.entry));
-  if (!entries.length) { showToast('لا توجد عمليات محددة', 'error'); return; }
+  if (!entries.length) { showToast('لا توجد عمليات محددة', 'warning'); return; }
   await buildAndDownloadWorkbook(entries, 'selected');
   // مجموعة مختارة من الصفحة المعروضة — مفيش سقف سيرفر عليها، فمفيش قص ممكن.
   showToast(`✅ تم تصدير ${entries.length.toLocaleString('en-US')} صف`, 'success');
