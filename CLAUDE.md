@@ -267,13 +267,6 @@ git show b1e37b4:3.5.0.html
 - ✅ **(اتعمل في v4.4.0)** معيار #28 — `WORKER URL` و`ADMIN WORKER URL` بقوا
   constants في `§CONFIG`. قيمة `ADMIN_WORKER_URL` من `ecommoda-constants` §5b
   (`employees-admin-panel-worker`).
-- **`checks` في `?action=diag` لسه بالشكل القديم** — الأداة بترجّع مفاتيح
-  top-level (`d1` · `shopifyAuth` · `locationCheck`) مش مصفوفة
-  `[{ ok, label, detail }]`. `worker-builder` v2.1.0 بيقول الشكل الجديد لأي
-  Worker **جديد**، والقديم يتوحّد مع أول تعديل مقصود. **ماتغيّرش في v4.4.0
-  عن قصد**: ده تغيير عقد، وواجهة الأداة بتقرا الشكل الحالي صح، ومفيش هب
-  بينادي الأداة دي مع غيرها. يتعمل لما يبقى فيه سبب.
-
 آخر تحديث: 08-09-2026 — 01:20
 
 </div>
