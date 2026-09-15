@@ -174,7 +174,7 @@ value... is a data gap, not evidence the package is safe") بينطبق بالع
 Bindings : DB → ecommoda-dev-logs
 Secrets  : WORKER_SECRET · CLIENT_ID · CLIENT_SECRET
 Vars     : SHOP_DOMAIN · LOCATION_ID        ← من [vars] في wrangler.toml
-Build watch paths : * (الافتراضي) — التضييق لسه ما اتعملش (راجع "مسائل مفتوحة")
+Build watch paths : index.js · wrangler.toml (مضيّق فعلاً — مش * الافتراضي)
 ```
 
 **تصنيف الـ `env.*` (إجراء §4-أ-٢ في `ecommoda-tool-migration-playbook`):**
@@ -301,14 +301,14 @@ git show b1e37b4:3.5.0.html
 - ✅ **(اتعمل في v4.5.0)** شكل `checks` في `?action=diag` بقى مصفوفة
   `[{ ok, label, detail }]` — **مع الإبقاء على المفاتيح القديمة** فترة
   انتقالية عشان أي واجهة متكاشة في متصفح موظف ما تكسرش.
-- **`Build watch paths` لسه `*` (الافتراضي).** يعني أي تعديل واجهة بينشر الـ
-  Worker تاني بنفس الكود. التضييق لـ `index.js` + `wrangler.toml` مستحسن
-  (§13-ب في `ecommoda-tool-migration-playbook`) — ولو اتعمل، **لازم**
-  الاختبارين الاتنين (سلبي وإيجابي)، وأي ملف جديد يعتمد عليه الـ Worker
-  لازم يتضاف للقايمة.
+- ✅ **(اتأكد 15-09-2026 من سكرين شوت داشبورد كلاودفلير، تاريخ التنفيذ الفعلي
+  مش معروف)** `Build watch paths` **مضيّق فعلاً** لـ `index.js` +
+  `wrangler.toml` — كان هنا موثّق غلط إنه لسه `*` الافتراضي. أي ملف جديد
+  الـ Worker يعتمد عليه لازم **يتضاف للقايمة يدويًا** — التضييق مش بيتوسّع
+  لوحده، وملف منسي هنا = تعديل عليه مايعملش build من غير أي تحذير.
 - ✅ **(اتعمل في v4.4.0)** معيار #28 — `WORKER URL` و`ADMIN WORKER URL` بقوا
   constants في `§CONFIG`. قيمة `ADMIN_WORKER_URL` من `ecommoda-constants` §5b
   (`employees-admin-panel-worker`).
-آخر تحديث: 15-09-2026 — 14:10
+آخر تحديث: 15-09-2026 — 14:40
 
 </div>
