@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// Order Status Updater — Worker  v4.4.0
-// skills: worker-builder v2.1.0 · constants v1.4.0 · order-lifecycle v1.3.0 — 08-09-2026
+// Order Status Updater — Worker  v4.6.0
+// skills: worker-builder v2.1.0 · constants v1.4.0 · order-lifecycle v1.8.0 — 15-09-2026
 // Account : ecommoda-dev   |   D1: ecommoda-dev-logs (binding: DB)
 // ---------------------------------------------------------------------------
 // 🔗🔗 قارئ خارجي لسجل الأداة دي — اقرا قبل أي تعديل على شكل `extra`
@@ -20,6 +20,22 @@
 // ✅ قبل ما تعدّل أي حاجة في بلوك الـ `extra` تحت (دوّر على §CONTRACT::extra)
 // أو في TOOL_NAME: افتح §TODAY-IMPORT في cod-payment-center-worker وعدّله
 // معاه في نفس التسليم. الأداتين على نفس قاعدة D1 (ecommoda-dev-logs).
+// ---------------------------------------------------------------------------
+// v4.6.0 — كتابة custom.package_whereabouts_s1/_s2 (15-09-2026، طلب أحمد):
+//   🆕 كل تحديث حالة بيكتب معاه (best-effort، نداء منفصل بعد كتابة الحالة —
+//   فشله warning مش error):
+//     Ready / Returned / Cancelled → "Office"
+//     Shipped                      → "Courier"
+//     Delivered                    → مسح القيمة (metafieldsDelete)
+//   على S1 أو S2 حسب field الـ specifier المتحلّل (نفس منطق resolveSpecifier).
+//   ⚠️ ده **مش** مصدر الحقيقة المعتمد لعقد الحقل ده — ecommoda-order-lifecycle
+//   Rule 17 بتحدد ٣ أدوات مخصّصة (تغليف/شحن/نقل مخزن↔مكتب) كمصدر رسمي مبني
+//   على حركة فيزيائية فعلية للطرد، وبتحصر النطاق على zone ∈ {Cairo+Giza,
+//   Show_Room} فقط. الكتابة هنا **إضافية** جنبهم (قرار أحمد) وعلى **كل**
+//   الأوردرات بغض النظر عن zone — فبتتكتب كمان على أوردرات Other_Regions
+//   (بوسطة) اللي المهارة بتقول إنها برّه النطاق أصلاً. القيمة هنا تقريب من
+//   حالة الأوردر مش قراءة لموقع فعلي، ومفيش فحص zone قبل الكتابة (قرار صريح،
+//   مش سهو). ✅ صفر تغيير في §CONTRACT::extra أو TOOL_NAME.
 // ---------------------------------------------------------------------------
 // v4.5.0 — مراجعة عميقة شاملة (08-09-2026) — راجع order-status-updater-review.md:
 //   ٢٢ بند اتقفلوا في تسليم واحد. كل بند 🔴 هنا كان **مثبت بدليل من الإنتاج**
@@ -317,7 +333,7 @@
 
 const TOOL_NAME   = 'order_status';
 const API_VERSION = '2026-01';
-const VERSION     = '4.5.0';
+const VERSION     = '4.6.0';
 
 // §CONSTANTS::logExport — سقف تصدير السجل. اسم مسمّى مش رقم في نص استعلام:
 // القيمة دي بترجع للواجهة كـ `cap` عشان الواجهة **ماتكتبهاش عندها** وتتعتّق.
@@ -373,6 +389,30 @@ const S2_STATUS = {
   SHIPPED:            'Shipped',
   IN_RETURN:          'In-Return',
   RETURNED:           'Returned',
+};
+
+// §CONSTANTS::packageWhereabouts — v4.6.0 🆕
+// كتابة إضافية best-effort جنب manual_status/status_2_r_e — مش مصدر الحقيقة
+// المعتمد لعقد package_whereabouts (ecommoda-order-lifecycle Rule 17: الـ٣
+// أدوات المخصّصة — التغليف · الشحن · نقل مخزن↔مكتب — هي المصدر الرسمي، وده
+// بيكتب **بالإضافة** لهم مش بدل منهم). القيمة هنا مُشتقة من الحالة المكتوبة
+// فقط، بغض النظر عن custom.zone (قرار أحمد 15-09-2026) — يعني ممكن تتكتب
+// حتى على أوردرات Other_Regions (بوسطة) رغم إن المهارة بتقول إن الحقل أصلاً
+// برّه نطاقهم؛ اعتبر القيمة هنا **تقريب**، مش دليل عهدة فعلي.
+// فشل الكتابة دي بعد ما الحالة الأساسية اتكتبت = warning مش error (Step 5A ⑩②).
+const WHEREABOUTS_MF = {
+  S1: { namespace: 'custom', key: 'package_whereabouts_s1', type: 'single_line_text_field' },
+  S2: { namespace: 'custom', key: 'package_whereabouts_s2', type: 'single_line_text_field' },
+};
+
+// null = امسح الميتافيلد (metafieldsDelete) — شوبيفاي بترفض value: '' (نفس
+// فخ مسح المندوب في Ready، v3.6.0).
+const WHEREABOUTS_BY_LABEL = {
+  [S1_STATUS.READY]:     'Office',
+  [S1_STATUS.RETURNED]:  'Office',
+  [S1_STATUS.CANCELLED]: 'Office',
+  [S1_STATUS.SHIPPED]:   'Courier',
+  [S1_STATUS.DELIVERED]: null,
 };
 
 // §CONSTANTS::specifiers
@@ -1564,6 +1604,30 @@ async function applyDirect(env, token, order, specifier, courier, reason, action
 
   await setMetafields(env, token, mfs);
   actions.push(`metafields:${mfs.map(m => m.key).join('+')}`);
+
+  // ─── v4.6.0 🆕 — Package whereabouts (best-effort — §CONSTANTS::packageWhereabouts) ───
+  // نداء منفصل **بعد** كتابة الحالة الأساسية، عمدًا: لو القيمة اترفضت لأي سبب
+  // (تعريف الميتافيلد اتغيّر مثلاً) ميسقطش نداء الحالة معاها في نفس البادج.
+  {
+    const whereField = WHEREABOUTS_MF[spec.field];
+    const whereValue = WHEREABOUTS_BY_LABEL[spec.label];
+    try {
+      if (whereValue === null) {
+        const n = await deleteMetafields(env, token, [{
+          ownerId: order.gid, namespace: whereField.namespace, key: whereField.key,
+        }]);
+        if (n > 0) actions.push(`metafieldsDelete:${whereField.key}`);
+      } else {
+        await setMetafields(env, token, [{
+          ownerId: order.gid, namespace: whereField.namespace, key: whereField.key,
+          type: whereField.type, value: whereValue,
+        }]);
+        actions.push(`metafields:${whereField.key}=${whereValue}`);
+      }
+    } catch (e) {
+      warnings.push(`الحالة اتكتبت، لكن تحديث موقع الطرد (${whereField.key}) فشل (${e.message}) — راجعه يدويًا`);
+    }
+  }
 
   // Ready / Ready_S2: order is going back on the shelf for a fresh dispatch —
   // امسح أي مندوب متسجّل من المحاولة اللي فاتت (لو موجود). الأوردر ده هيخرج
