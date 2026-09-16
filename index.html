@@ -877,7 +877,20 @@ body {
 
       <div class="cl-version-block">
         <div class="cl-version-row">
-          <span class="cl-ver-badge" id="clLatestVerBadge">v4.5.0</span>
+          <span class="cl-ver-badge" id="clLatestVerBadge">v4.6.0</span>
+          <span class="cl-ver-date">16-09-2026</span>
+        </div>
+        <ul class="cl-items">
+          <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>🔴 <strong>عمود COD في المانفيست كان بيطبع رقم غلط على كل أوردر استبدال واسترجاع — من غير أي إشارة.</strong> الأداة كانت بتاخد «المستحق على العميل»، ولو طلع صفر أو بالسالب كانت بترجع لـ<strong>إجمالي الأوردر</strong> بدله وتشيل إشارة السالب. والحالتين دول هما <strong>تعريف</strong> أوردر الاستبدال/الاسترجاع — فالرقم ماكانش بيغلط أحيانًا، كان بيغلط <strong>كل مرة</strong>. مقيس على مانفيست حقيقي: <code>#53987</code> استبدال طبع «حصّل 2,950» والعميل <strong>دافع بالكامل</strong> · <code>#54173</code> استرجاع طبع «حصّل 150» والمفروض المندوب <strong>يدفع 2,125 للعميل</strong> · <code>#53648</code> استرجاع طبع «حصّل 75» والمفروض يدفع 1,750. دلوقتي الرقم هو <strong>نفس</strong> الرقم اللي أداة التحصيل بتحصّل بيه والفاتورة بتطبعه، و<strong>بإشارته</strong>: موجب = تحصيل · <span style="color:var(--red)">سالب = المندوب بيدفع للعميل</span> · صفر = مفيش حركة فلوس.</span></li>
+          <li class="cl-item"><span class="cl-tag change">تغيير</span><span><strong>مجموع المانفيست بقى تلات أرقام:</strong> «إجمالي التحصيل» و«إجمالي الاسترداد» و«الصافي المستحق» — فوق وتحت الجدول. رقم واحد على ورقة فيها تحصيل واسترداد بيخفي حركة الفلوس اللي المندوب بيسوّيها آخر اليوم.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>عمود «نوع الأوردر» في المانفيست</strong> — <strong>عادي</strong> · <strong>استبدال</strong> · <strong>استرجاع</strong>، ومعاه عدّاد لكل نوع جنب عدد الأوردرات فوق. النوع متاخد من دورة الإرجاع المفتوحة على الأوردر نفسه (وجود قطعة بديلة = استبدال)، مش من حالة الأوردر — الحالة وقت رحلة المندوب بتبقى «Shipped» في الحالتين ومابتفرّقش بينهم أصلاً.</span></li>
+          <li class="cl-item"><span class="cl-tag new">جديد</span><span><strong>الأوردر اللي شوبيفاي ما رجّعتش بياناته بقى بيتقال بالاسم.</strong> قبل كده كان بيترسم صف فاضي بـ COD = <strong>صفر</strong> وبيتحسب في المجموع في صمت. دلوقتي COD بتاعه <code>—</code>، <strong>مش داخل في أي مجموع</strong>، وفيه تحذير أحمر فوق الجدول في الورقة وتوست على الشاشة برقم الأوردر.</span></li>
+        </ul>
+      </div>
+
+      <div class="cl-version-block">
+        <div class="cl-version-row">
+          <span class="cl-ver-badge old">v4.5.0</span>
           <span class="cl-ver-date">08-09-2026</span>
         </div>
         <ul class="cl-items">
@@ -1159,7 +1172,7 @@ body {
             <li>بعد انتهاء التحديث تظهر <strong>نافذة ملخص منبثقة</strong> (v3.6.0) فيها أرقام النتيجة بس — ناجح / محتاج مراجعة / فاشل — من غير تفاصيل أوردرات، ولما يكون فيه فشل بتتلوّن أحمر بالكامل وبيظهر بانر تنبيه. منها الموظف بيختار: 🆕 تسجيل أوردرات جديدة (إعادة ضبط كاملة لخطوة 1) · 📜 تفاصيل الأوردرات (يفتح تاب سجل العمليات) · 🖨️ طباعة (في حالة Shipped فقط).</li>
             <li>الأوردرات اللي اتحدّثت فعلاً بتخرج من القائمة تلقائياً، والفاشلة بس هي اللي بتفضل للمراجعة أو إعادة المحاولة.</li>
             <li>كل أوردر يُسجَّل في D1 كصف مستقل، مجمّعاً في تاب السجل حسب <code>batchId</code> كصف جدول واحد قابل للتوسيع.</li>
-            <li>لعمليات Shipped: طباعة manifest بالباركود وبيانات العميل والـ COD — لعملية واحدة أو لعدة عمليات محددة مع بعض من تاب السجل.</li>
+            <li>لعمليات Shipped: طباعة manifest بالباركود وبيانات العميل و<strong>نوع الأوردر</strong> (عادي/استبدال/استرجاع) والـ COD — لعملية واحدة أو لعدة عمليات محددة مع بعض من تاب السجل. ⚠️ الـ COD <strong>موقّع</strong> من <code>totalOutstandingSet</code>: موجب = تحصيل · سالب = المندوب بيدفع للعميل · صفر = مفيش حركة فلوس · <code>—</code> = شوبيفاي ما رجّعتش الرقم (ومش داخل في أي مجموع).</li>
           </ol>
 
           <h4>الـ Endpoints الرئيسية</h4>
@@ -1212,7 +1225,7 @@ body {
             <li><code>التحقق من الانتقال (سلطة نهائية)</code> — Worker §STATUS — <code>isTransitionValid()</code></li>
             <li><code>الكتابة على Shopify + مسح المندوب عند Ready</code> — Worker §STATUS — <code>applyDirect()</code> / §SHOPIFY — <code>deleteMetafields()</code></li>
             <li><code>نافذة ملخص التحديث (بديل قائمة النتائج القديمة)</code> — HTML §TOOL — <code>#summaryOverlay</code> / §TOOL-JS — <code>showUpdateSummary()</code> / <code>summaryStartFresh()</code> / <code>summaryOpenLog()</code> / <code>summaryPrint()</code></li>
-            <li><code>طباعة المانفيست (فردي أو مجمّع من السجل)</code> — HTML §TOOL-JS — <code>printManifest()</code> / §LOG-JS — <code>printBatch()</code> / <code>printSelectedBatches()</code></li>
+            <li><code>طباعة المانفيست (فردي أو مجمّع من السجل)</code> — HTML §TOOL-JS — <code>printManifest()</code> / <code>MANIFEST_TYPE_LABEL</code> / §LOG-JS — <code>printBatch()</code> / <code>printSelectedBatches()</code> — Worker §STATUS — <code>order_details</code> / <code>DETAILS_CHUNK</code>. 🔴 (v4.6.0) <code>cod</code> بقى <code>totalOutstandingSet</code> <strong>موقّع</strong> — الصيغة القديمة <code>Math.abs(outstanding &gt; 0 ? outstanding : currentTotalPrice)</code> كان فرعها التاني بيشتغل <strong>بس</strong> لما يكون <code>outstanding &lt;= 0</code>، وده تعريف أوردر الاستبدال/الاسترجاع — يعني رقم مخترع <strong>مضمون</strong> على كل أوردر R/E. و<code>orderType</code> من <strong>أحدث دورة إرجاع غير ملغية</strong> (<code>exchangeLineItems</code> = استبدال) — ⛔ مش من <code>status_2_r_e</code> (قيمته <code>Shipped</code> في الحالتين وقت المانفيست) ولا من <code>fulfillableQuantity</code> (قطعة الاستبدال بتبقى fulfilled خلاص).</li>
             <li><code>سجل العمليات (جدول أعمدة + تفاصيل قابلة للتوسيع)</code> — HTML §LOG-JS — <code>get_logs</code> / <code>renderLog()</code></li>
             <li><code>فلاتر السجل (حالة/مندوب/النتيجة/موظف اختيار متعدد + بحث + فترة تاريخ في صف منفصل، قسم موحّد unified-section من v3.7.0)</code> — HTML §LOG-JS — <code>msState</code> / <code>fetchLog()</code> / <code>anyFilterActive()</code> — Worker §SHARED — <code>buildLogFilterSQL()</code></li>
             <li><code>ترتيب أعمدة السجل (تاريخ/حالة/مندوب/موظف — تصاعدي/تنازلي/بلا ترتيب، على السيرفر)</code> — HTML §LOG-JS — <code>toggleLogSort()</code> / <code>logSortState</code> — Worker §SHARED — <code>buildLogSortSQL()</code> / <code>LOG_SORT_COLUMNS</code></li>
@@ -1802,7 +1815,7 @@ function orderLink(orderNumber, orderId) {
 // سجل التحديثات + نص شاشة الدخول) وبيتزامنوا يدويًا. دلوقتي المصدر واحد
 // و renderVersionUI() بتملاهم كلهم.
 // ⚠️ لازم يساوي VERSION في الـ Worker — الملفين بيترفعوا مع بعض.
-const TOOL_VERSION = '4.5.0';
+const TOOL_VERSION = '4.6.0';
 
 // §CONFIG::minWorker — أقل نسخة Worker الواجهة دي بتشتغل معاها (Standards #29).
 // v4.5.0 هي النسخة اللي ضافت `batchSizes` في رد get_logs (كشف الدفعة المقسومة
@@ -1814,7 +1827,14 @@ const TOOL_VERSION = '4.5.0';
 // ⚠️ صيانة: أي endpoint/حقل جديد الصفحة تعتمد عليه → ارفع الرقم ده لنسخة
 //    الـ Worker اللي ضافته، في نفس التسليم.
 // ⚠️ مالهاش أي علاقة بـ TOOL_VERSION — دي بتوصف أقل Worker مقبول، مش الصفحة.
-const MIN_WORKER_VERSION = '4.5.0';
+// 🔴 اترفع لـ 4.7.0 في واجهة v4.6.0 — والترفيع هنا **مش تحذير، منع ضرر**:
+//    المانفيست بقى بيقرا `orderType` و`missing` (مش موجودين قبل 4.7.0)،
+//    و**أهم من ده** بيعتمد على إن `cod` بقى `totalOutstandingSet` موقّع.
+//    Worker 4.6.0 بيرجّع نفس اسم الحقل بقيمة محسوبة بالصيغة القديمة
+//    (`Math.abs(outstanding > 0 ? outstanding : currentTotalPrice)`) — يعني
+//    التدهور **مش آمن ولا معلن**: الورقة بتطلع من الطابعة بأرقام فلوس غلط
+//    على كل أوردر استبدال/استرجاع، وصفر خطأ في الكونسول. ⛔ متنزّلوش.
+const MIN_WORKER_VERSION = '4.7.0';
 
 let workerVersion = null;
 
@@ -3702,25 +3722,85 @@ function csmAddSelected() {
 }
 
 // ─── §TOOL-JS::printManifest ───
+//
+// 🔴 v4.6.0 — عمود COD بقى **موقّع**، ومعاه عمود «نوع الأوردر».
+//
+//    العطل اللي التمريرة دي اتعملت عشانه: الـ Worker كان بيحسب `cod` بـ
+//    `Math.abs(outstanding > 0 ? outstanding : current)`، والفرع التاني
+//    (إجمالي الأوردر الحالي) كان بيشتغل **بس** لما يكون مفيش مستحق — يعني
+//    على كل أوردر استبدال/استرجاع بالظبط. المانفيست كان بيقول للمندوب
+//    «حصّل 2,950» على أوردر العميل دافعه بالكامل، و«حصّل 150» على أوردر
+//    المفروض يدفع فيه 2,125 **للعميل**. التفاصيل الكاملة في §STATUS::orderDetails
+//    في الـ Worker. الإصلاح في الـ Worker؛ الواجهة هنا مسؤولة عن حاجتين بس:
+//    ① تعرض الإشارة ومتلمّهاش، و② ماتحسبش «مش معروف» كصفر.
+//
+// 🔴 المجموع بقى تلات أرقام مش رقم واحد: تحصيل · استرداد · الصافي.
+//    رقم صافي واحد على ورقة فيها تحصيل واسترداد بيخفي حركة الفلوس الحقيقية
+//    اللي المندوب بيسوّيها في آخر اليوم.
+//
+// ⚠️ الأوردر اللي شوبيفاي ما رجّعتوش (`missing`) أو اللي COD بتاعه `null`
+//    بيتعرض **بـ «—» وبتحذير فوق الجدول**، ومابيدخلش أي مجموع. الصفر هنا
+//    كان بيتقري «مفيش تحصيل» وهو أصلاً «معرفناش».
+const MANIFEST_TYPE_LABEL = {
+  normal:   { text: 'عادي',    bg: '#eef2ff', fg: '#3730a3', bd: '#c7d2fe' },
+  exchange: { text: 'استبدال', bg: '#f3e8ff', fg: '#6b21a8', bd: '#e9d5ff' },
+  return:   { text: 'استرجاع', bg: '#fef3c7', fg: '#92400e', bd: '#fde68a' },
+};
+
 async function printManifest(orderIds, courier) {
   if (!orderIds.length) return;
   showToast('⏳ جاري تجهيز المانفيست...', 'neutral');
 
-  let details = {};
+  let details = {}, missing = [], truncatedReturns = false;
   try {
     const data = await apiPost('order_details', { orderIds });
-    details = data.details || {};
+    details          = data.details || {};
+    missing          = data.missing || [];
+    truncatedReturns = !!data.truncatedReturns;
   } catch (e) {
     showToast(`تعذّر جلب بيانات العملاء: ${e.message}`, 'error');
     return;
   }
 
-  const date     = formatDateForExport(new Date().toISOString());
-  const totalCOD = orderIds.reduce((s, id) => s + parseFloat(details[id]?.cod || 0), 0);
+  const date = formatDateForExport(new Date().toISOString());
+
+  // ⚠️ `cod` بيوصل نص (toFixed) أو `null`. `parseFloat(null)` = NaN — فالفحص
+  //    على النوع الأول، مش على القيمة. `d.cod || 0` كان هيحوّل صفر مشروع
+  //    و null المجهول للحاجة الواحدة.
+  const codOf = (d) => {
+    if (!d || d.cod == null) return null;
+    const v = parseFloat(d.cod);
+    return Number.isFinite(v) ? v : null;
+  };
+
+  let collectTotal = 0, refundTotal = 0, unknownCount = 0;
+  orderIds.forEach(id => {
+    const v = codOf(details[id]);
+    if (v == null) { unknownCount++; return; }
+    if (v > 0) collectTotal += v; else if (v < 0) refundTotal += -v;
+  });
+  const netTotal = collectTotal - refundTotal;
+
+  const typeCount = { normal: 0, exchange: 0, return: 0 };
+  orderIds.forEach(id => {
+    const t = details[id]?.orderType;
+    if (t && typeCount[t] !== undefined) typeCount[t]++;
+  });
+
+  const nf = (n) => Math.round(Math.abs(n)).toLocaleString('en-US');
 
   const rows = orderIds.map((id, i) => {
-    const d = details[id] || {};
-    const cod = Math.round(parseFloat(d.cod || 0));
+    const d    = details[id] || {};
+    const v    = codOf(d);
+    const t    = MANIFEST_TYPE_LABEL[d.orderType] || null;
+    const codCell = v == null
+      ? `<span style="color:#b91c1c">—</span>`
+      : (v < 0
+          ? `<span style="color:#b91c1c">− ${nf(v)}</span>`
+          : `${nf(v)}`);
+    const typeCell = t
+      ? `<span style="display:inline-block;padding:1px 6px;border-radius:9px;font-size:9px;font-weight:700;background:${t.bg};color:${t.fg};border:1px solid ${t.bd};white-space:nowrap">${t.text}</span>`
+      : `<span style="color:#9ca3af">—</span>`;
     return `<tr>
       <td style="text-align:center;font-weight:600">${i + 1}</td>
       <td style="font-weight:700;color:#2563eb;white-space:nowrap">${escHtml(d.orderName || '—')}</td>
@@ -3728,9 +3808,29 @@ async function printManifest(orderIds, courier) {
       <td>${escHtml(d.customerName || '—')}</td>
       <td style="text-align:center;direction:ltr;white-space:nowrap">${escHtml(d.phone || '—')}</td>
       <td style="font-size:9.5px">${escHtml(d.address || '—')}</td>
-      <td style="text-align:left;font-weight:700;direction:ltr;white-space:nowrap">${cod.toLocaleString('en-US')}</td>
+      <td style="text-align:center">${typeCell}</td>
+      <td style="text-align:left;font-weight:700;direction:ltr;white-space:nowrap">${codCell}</td>
     </tr>`;
   }).join('');
+
+  const warnings = [];
+  if (missing.length)
+    warnings.push(`⚠️ ${missing.length} أوردر شوبيفاي ما رجّعتش بياناته — صفوفه فاضية و<b>مش داخلة في أي مجموع</b>: ${escHtml(missing.join('، '))}`);
+  // الأوردر الغايب بيتحسب unknown برضه (مالوش details أصلاً) — فالفرق هو
+  // الأوردرات اللي رجعت فعلاً بس شوبيفاي ما رجّعتش المستحق بتاعها.
+  const unknownNotMissing = unknownCount - missing.length;
+  if (unknownNotMissing > 0)
+    warnings.push(`⚠️ ${unknownNotMissing} أوردر شوبيفاي ما رجّعتش المستحق بتاعه — COD بتاعه <b>«—» ومش داخل في أي مجموع</b>.`);
+  if (truncatedReturns)
+    warnings.push('⚠️ أوردر أو أكتر عنده أكتر من ١٠ دورات إرجاع — «نوع الأوردر» فيه ممكن يكون مبني على دورة مش الأحدث.');
+  const warnHtml = warnings.length
+    ? `<div class="mw">${warnings.map(w => `<div>${w}</div>`).join('')}</div>` : '';
+
+  const typeChips = [
+    typeCount.normal   ? `<span class="tc" style="background:#eef2ff;color:#3730a3;border-color:#c7d2fe">عادي ${typeCount.normal}</span>` : '',
+    typeCount.exchange ? `<span class="tc" style="background:#f3e8ff;color:#6b21a8;border-color:#e9d5ff">استبدال ${typeCount.exchange}</span>` : '',
+    typeCount.return   ? `<span class="tc" style="background:#fef3c7;color:#92400e;border-color:#fde68a">استرجاع ${typeCount.return}</span>` : '',
+  ].filter(Boolean).join('');
 
   const barcodes = orderIds.map((id, i) =>
     `JsBarcode("#bc-${i}", "${id}", { format:"CODE128", width:1.5, height:36, displayValue:false, margin:2 });`
@@ -3744,21 +3844,26 @@ async function printManifest(orderIds, courier) {
 body{font-family:'Segoe UI',Arial,sans-serif;padding:20px;font-size:11px;color:#111827;direction:rtl}
 .mh{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #111827}
 .mt{font-size:20px;font-weight:800;margin-bottom:6px}
-.mm{display:flex;gap:24px;margin-top:8px}
+.mm{display:flex;gap:20px;margin-top:8px;flex-wrap:wrap}
 .mi{display:flex;flex-direction:column}
 .ml{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
 .mv{font-size:14px;font-weight:700;margin-top:2px}
+.tcs{display:flex;gap:5px;margin-top:4px}
+.tc{display:inline-block;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700;border:1px solid}
+.mw{border:1px solid #fca5a5;background:#fef2f2;color:#991b1b;border-radius:6px;padding:7px 10px;margin-bottom:12px;font-size:10.5px;line-height:1.6}
 table{width:100%;border-collapse:collapse;margin-bottom:16px;table-layout:fixed}
-col.c1{width:22px}col.c2{width:60px}col.c3{width:200px}col.c4{width:90px}
-col.c5{width:88px}col.c6{width:auto}col.c7{width:55px}
+col.c1{width:22px}col.c2{width:60px}col.c3{width:190px}col.c4{width:88px}
+col.c5{width:88px}col.c6{width:auto}col.c7{width:58px}col.c8{width:62px}
 thead th{background:#f5f6fa;padding:4px 3px;font-size:10px;font-weight:700;color:#6b7280;
   text-transform:uppercase;border-bottom:1.5px solid #e2e5ed;white-space:nowrap}
 tbody td{padding:3px;border-bottom:1px solid #eef0f5;vertical-align:middle;line-height:1.3;overflow:hidden}
 tbody tr:nth-child(even){background:#fafbfd}
 svg rect,svg path{shape-rendering:crispEdges}
-.mf{display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:2px solid #111827}
-.tv{font-size:20px;font-weight:800;direction:ltr}
-.sb{border:1px solid #e2e5ed;border-radius:8px;padding:8px 20px;font-size:11px;color:#9ca3af;text-align:center;min-width:160px}
+.mf{display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:2px solid #111827;gap:14px}
+.tot{display:flex;gap:22px}
+.tl{font-size:12px;color:#6b7280}
+.tv{font-size:18px;font-weight:800;direction:ltr}
+.sb{border:1px solid #e2e5ed;border-radius:8px;padding:8px 18px;font-size:11px;color:#9ca3af;text-align:center;min-width:140px}
 @media print{body{padding:10px}@page{margin:10mm;size:A4}}
 </style></head><body>
 <div class="mh"><div>
@@ -3766,23 +3871,31 @@ svg rect,svg path{shape-rendering:crispEdges}
   <div class="mm">
     <div class="mi"><span class="ml">المندوب</span><span class="mv">${escHtml(courier)}</span></div>
     <div class="mi"><span class="ml">التاريخ</span><span class="mv">${date}</span></div>
-    <div class="mi"><span class="ml">عدد الأوردرات</span><span class="mv">${orderIds.length}</span></div>
-    <div class="mi"><span class="ml">إجمالي COD</span><span class="mv" style="direction:ltr">${Math.round(totalCOD).toLocaleString('en-US')} EGP</span></div>
+    <div class="mi"><span class="ml">عدد الأوردرات</span><span class="mv">${orderIds.length}</span>
+      ${typeChips ? `<span class="tcs">${typeChips}</span>` : ''}</div>
+    <div class="mi"><span class="ml">تحصيل</span><span class="mv" style="direction:ltr;color:#15803d">${nf(collectTotal)} EGP</span></div>
+    <div class="mi"><span class="ml">استرداد</span><span class="mv" style="direction:ltr;color:#b91c1c">${refundTotal ? '− ' : ''}${nf(refundTotal)} EGP</span></div>
+    <div class="mi"><span class="ml">الصافي</span><span class="mv" style="direction:ltr">${netTotal < 0 ? '− ' : ''}${nf(netTotal)} EGP</span></div>
   </div>
 </div><div style="font-size:28px">🛵</div></div>
+${warnHtml}
 <table>
-  <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"></colgroup>
+  <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"></colgroup>
   <thead><tr>
     <th style="text-align:center">#</th><th style="text-align:right">رقم الأوردر</th>
     <th style="text-align:center">الباركود</th><th style="text-align:right">اسم العميل</th>
     <th style="text-align:center">التليفون</th><th style="text-align:right">العنوان</th>
+    <th style="text-align:center">نوع الأوردر</th>
     <th style="text-align:left">COD</th>
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>
 <div class="mf">
-  <div><div style="font-size:13px;color:#6b7280">إجمالي التحصيل</div>
-    <div class="tv">${Math.round(totalCOD).toLocaleString('en-US')} EGP</div></div>
+  <div class="tot">
+    <div><div class="tl">إجمالي التحصيل</div><div class="tv" style="color:#15803d">${nf(collectTotal)} EGP</div></div>
+    <div><div class="tl">إجمالي الاسترداد</div><div class="tv" style="color:#b91c1c">${refundTotal ? '− ' : ''}${nf(refundTotal)} EGP</div></div>
+    <div><div class="tl">الصافي المستحق</div><div class="tv">${netTotal < 0 ? '− ' : ''}${nf(netTotal)} EGP</div></div>
+  </div>
   <div class="sb">توقيع المندوب<br><br><br></div>
   <div class="sb">توقيع المستلم<br><br><br></div>
 </div>
@@ -3801,6 +3914,11 @@ setTimeout(function(){window.print()},400)};<\/script>
   }
   win.document.write(html);
   win.document.close();
+
+  // ⚠️ التحذير بيتقال على شاشة الأداة كمان، مش في الورقة بس — الموظف ممكن
+  //    يبعت الورقة للطابعة من غير ما يقراها.
+  if (missing.length || unknownCount)
+    showToast(`⚠️ ${missing.length || unknownCount} أوردر مالوش قيمة COD — مش داخل في مجموع المانفيست`, 'warning', 8000);
 }
 
 

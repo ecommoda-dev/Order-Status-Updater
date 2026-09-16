@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// Order Status Updater — Worker  v4.6.0
+// Order Status Updater — Worker  v4.7.0
 // skills: worker-builder v2.1.0 · constants v1.4.0 · order-lifecycle v1.8.0 — 15-09-2026
 // Account : ecommoda-dev   |   D1: ecommoda-dev-logs (binding: DB)
 // ---------------------------------------------------------------------------
@@ -20,6 +20,44 @@
 // ✅ قبل ما تعدّل أي حاجة في بلوك الـ `extra` تحت (دوّر على §CONTRACT::extra)
 // أو في TOOL_NAME: افتح §TODAY-IMPORT في cod-payment-center-worker وعدّله
 // معاه في نفس التسليم. الأداتين على نفس قاعدة D1 (ecommoda-dev-logs).
+// ---------------------------------------------------------------------------
+// v4.7.0 — عمود COD في المانفيست كان بيطبع رقم مخترع لأوردرات الاستبدال
+//          والاسترجاع + عمود «نوع الأوردر» (16-09-2026، بلاغ أحمد):
+//
+//   🔴 كاسر (إصلاح فلوس) — `order_details.cod`:
+//      الصيغة القديمة `Math.abs(outstanding > 0 ? outstanding : current)`
+//      كانت بترجع لـ `currentTotalPriceSet` **بس** لما `outstanding <= 0` —
+//      وده بالظبط شرط أوردر الاستبدال/الاسترجاع (مدفوع بالكامل أو عليه
+//      استرداد). يعني الـ fallback ماكانش بيغطّي حالة ناقصة، كان **مضمون
+//      يشتغل غلط** على كل أوردر R/E. و`Math.abs` كان بيمسح إشارة الاسترداد.
+//      القياس الحي (16-09-2026، أربع أوردرات من مانفيست Sobhy):
+//        #54869 عادي     out  2675 · cur 2675 → 2675 ✅
+//        #53987 استبدال  out     0 · cur 2950 → 2950 ❌  (المندوب بيحصّل من
+//                                                        عميل **دافع خلاص**)
+//        #54173 استرجاع  out -2125 · cur  150 →  150 ❌  (المفروض يدفع 2125)
+//        #53648 استرجاع  out -1750 · cur   75 →   75 ❌  (المفروض يدفع 1750)
+//      دلوقتي `cod` = `totalOutstandingSet` **موقّع** وبس — نفس المصدر اللي
+//      cod-payment-center-worker بيحصّل بيه (`getOrderOutstanding`) ونفس
+//      `totalDue` في فاتورة order-printer-worker. `currentTotalPriceSet`
+//      **اتشال من الاستعلام خالص** — مستهلكه الوحيد كان الـ fallback الغلط.
+//      🔴 و`null` بقت `null` مش صفر: غياب الرقم ≠ «مفيش تحصيل».
+//
+//   🆕 `order_details.orderType` — `normal` / `exchange` / `return`.
+//      المصدر أحدث دورة إرجاع غير ملغية (فلترة CANCELED/DECLINED + ترتيب
+//      بـ createdAt — قاعدة R7 بتاعة order-printer-worker)، والفاصل
+//      `exchangeLineItems`. ⛔ مش من `status_2_r_e` — قيمته وقت رحلة المندوب
+//      بتبقى Ready/Shipped/Returned فالتفرقة مش موجودة فيه أصلاً.
+//
+//   🆕 `order_details.missing[]` — الـ IDs اللي شوبيفاي ما رجّعتهاش. من
+//      غيرها الواجهة كانت بترسم صف فاضي بـ COD صفر وتضيفه للمجموع في صمت.
+//
+//   🆕 DETAILS_CHUNK = 10 — بلوك `returns` بيرفع تكلفة النداء، و٥٠ أوردر
+//      (سقف MAX_ORDER_IDS) في نداء واحد ممكن يعدّي سقف تكلفة شوبيفاي
+//      فترجع الدفعة كلها فاشلة (نفس درس STATES_CHUNK_RETURNS في v4.5.0).
+//
+//   ✅ صفر تغيير في §CONTRACT::extra أو TOOL_NAME — `order_details` قراءة
+//      بحتة ومابيكتبش أي صف D1، والقارئ الخارجي (أداة التحصيل) مالوش أي
+//      علاقة بالمسار ده. §TODAY-IMPORT **ما اتلمسش**.
 // ---------------------------------------------------------------------------
 // v4.6.0 — كتابة custom.package_whereabouts_s1/_s2 (15-09-2026، طلب أحمد):
 //   🆕 كل تحديث حالة بيكتب معاه (best-effort، نداء منفصل بعد كتابة الحالة —
@@ -333,7 +371,7 @@
 
 const TOOL_NAME   = 'order_status';
 const API_VERSION = '2026-01';
-const VERSION     = '4.6.0';
+const VERSION     = '4.7.0';
 
 // §CONSTANTS::logExport — سقف تصدير السجل. اسم مسمّى مش رقم في نص استعلام:
 // القيمة دي بترجع للواجهة كـ `cap` عشان الواجهة **ماتكتبهاش عندها** وتتعتّق.
@@ -354,6 +392,15 @@ const MAX_ORDER_IDS = 50;
 // هنا هو الحارس؛ ومن غيره الفشل بيظهر كخطأ GraphQL مبهم على دفعة كاملة.
 const STATES_CHUNK          = 50;   // بدون بلوك المرتجعات
 const STATES_CHUNK_RETURNS  = 5;    // مع بلوك المرتجعات
+
+// §CONSTANTS::detailsChunk — v4.7.0
+// `order_details` بقى بيجيب بلوك `returns` (عشان نوع الأوردر في المانفيست).
+// البلوك ده أخف بكتير من بلوك reverseFulfillmentOrders اللي فوق (مفيش
+// dispositions ولا RFO — دورات بس + exchangeLineItems(first:1))، بس هو برضه
+// connection متداخلة فبيرفع تكلفة النداء الواحد. ٥٠ أوردر (سقف MAX_ORDER_IDS)
+// في نداء واحد بيقرّب من سقف تكلفة الاستعلام عند شوبيفاي، وتخطّيه بيرجّع
+// **الدفعة كلها** فاشلة — يعني المانفيست مايتطبعش خالص. التقسيم هنا هو الحارس.
+const DETAILS_CHUNK         = 10;
 
 // §CONSTANTS::metafields
 const MF = {
@@ -1977,6 +2024,38 @@ export default {
       }
 
       // §STATUS::orderDetails — customer + COD data for manifest printing
+      //
+      // 🔴 v4.7.0 — `cod` بقى **موقّع** ومن `totalOutstandingSet` لوحده.
+      //    الصيغة القديمة كانت:
+      //        Math.abs(outstanding > 0 ? outstanding : current)
+      //    والفرع التاني (`current` = currentTotalPriceSet) كان بيشتغل **بس**
+      //    لما يكون `outstanding <= 0` — يعني بالظبط الحالات اللي مفيش فيها
+      //    تحصيل أصلاً (مدفوع بالكامل) أو اللي فيها **استرداد** للعميل. يعني
+      //    الـ fallback ماكانش بيغطّي حالة ناقصة، كان **بيخترع رقم** في كل
+      //    أوردر استبدال/استرجاع. مقيس حيًا 16-09-2026:
+      //        #54869 عادي     outstanding  2675 · current 2675 → طبع 2675 ✅
+      //        #53987 استبدال  outstanding     0 · current 2950 → طبع 2950 ❌ (الصح 0)
+      //        #54173 استرجاع  outstanding -2125 · current  150 → طبع  150 ❌ (الصح -2125)
+      //        #53648 استرجاع  outstanding -1750 · current   75 → طبع   75 ❌ (الصح -1750)
+      //    و`Math.abs` كان بيشيل الإشارة كمان، فحتى لو الفرع الصح اتنفّذ كان
+      //    «استرداد ٢١٢٥» هيتطبع «تحصيل ٢١٢٥» — أخطر من الرقم الغلط نفسه.
+      //    `totalOutstandingSet` هو **نفس** المصدر اللي cod-payment-center-worker
+      //    بيحصّل بيه (`getOrderOutstanding`)، وهو نفسه `totalDue` في فاتورة
+      //    order-printer-worker — فالمانفيست بقى متسق مع الورقة والتحصيل.
+      //
+      // 🔴 و`null` معناها «شوبيفاي ما رجّعتش الرقم» مش «صفر». الصيغة القديمة
+      //    (`|| 0`) كانت بتحوّل الغياب لصفر، والصفر في عمود COD بيتقري
+      //    «مفيش تحصيل» — نفس عيلة getOrderOutstanding في أداة التحصيل.
+      //
+      // 🆕 `orderType` — عادي / استبدال / استرجاع (v4.7.0). المصدر: **أحدث
+      //    دورة إرجاع غير ملغية** (نفس قاعدة R7 في order-printer-worker:
+      //    فلترة CANCELED/DECLINED + ترتيب بـ createdAt مش بترتيب المصفوفة)،
+      //    والفاصل بين استبدال واسترجاع هو `exchangeLineItems`.
+      //    ⛔ ممنوع الاعتماد على `custom.status_2_r_e`: قيمته بتبقى `Ready`/
+      //    `Shipped`/`Returned` وقت رحلة المندوب — يعني التفرقة بين RETURN و
+      //    EXCHANGE **مش موجودة فيه أصلاً** في اللحظة اللي المانفيست بيتطبع فيها.
+      //    ⛔ وممنوع الاعتماد على `currentSubtotalLineItemsQuantity > 0`:
+      //    المرتجع الجزئي (بند راجع وبند متساب) بيدّي نفس الرقم زي الاستبدال.
       if (action === 'order_details') {
         if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
         assertEnv(env, 'shopify');
@@ -1985,38 +2064,73 @@ export default {
         const tooManyDetails = tooManyIds(orderIds);
         if (tooManyDetails) return json({ ok: false, error: tooManyDetails }, 400, request);
 
-        const token = await getAccessToken(env);
-        const data  = await shopifyGQL(env, token, `
-          query OrderDetails($ids: [ID!]!) { nodes(ids: $ids) {
-              ... on Order {
-                id name
-                totalOutstandingSet { shopMoney { amount } }
-                currentTotalPriceSet { shopMoney { amount } }
-                shippingAddress {
-                  firstName lastName phone
-                  address1 address2 city province
-                }
-              }
-            } }
-        `, { ids: orderIds.map(gid) }, 'orderDetails');
-
+        const token   = await getAccessToken(env);
         const details = {};
-        for (const n of (data?.data?.nodes || [])) {
-          if (!n?.id) continue;
-          const a = n.shippingAddress;
-          const outstanding = parseFloat(n.totalOutstandingSet?.shopMoney?.amount || 0);
-          const current     = parseFloat(n.currentTotalPriceSet?.shopMoney?.amount || 0);
-          details[numericId(n.id)] = {
-            orderId:      numericId(n.id),   // v3.7.0 (worker-builder Step 5) — نفس القاعدة
-            orderName:    n.name,
-            customerName: a ? `${a.firstName || ''} ${a.lastName || ''}`.trim() || null : null,
-            phone:        a?.phone || null,
-            address:      a ? [a.address1, a.address2, a.city, a.province].filter(Boolean).join('، ') : null,
-            // COD = what is still owed; falls back to the current order total
-            cod: Math.abs(outstanding > 0 ? outstanding : current).toFixed(2),
-          };
+        let   truncatedReturns = false;
+
+        // §STATUS::orderDetails::chunking — v4.7.0
+        // بلوك `returns` بيرفع تكلفة الاستعلام الواحد. ٥٠ أوردر في نداء واحد
+        // (سقف MAX_ORDER_IDS) كان بيعدّي سقف تكلفة شوبيفاي فالدفعة كلها بترجع
+        // فاشلة — نفس بالظبط اللي حصل مع STATES_CHUNK_RETURNS في v4.5.0.
+        for (let i = 0; i < orderIds.length; i += DETAILS_CHUNK) {
+          const slice = orderIds.slice(i, i + DETAILS_CHUNK);
+          const data  = await shopifyGQL(env, token, `
+            query OrderDetails($ids: [ID!]!) { nodes(ids: $ids) {
+                ... on Order {
+                  id name
+                  totalOutstandingSet { shopMoney { amount } }
+                  shippingAddress {
+                    firstName lastName phone
+                    address1 address2 city province
+                  }
+                  returns(first: 10) {
+                    pageInfo { hasNextPage }
+                    nodes {
+                      id status createdAt
+                      exchangeLineItems(first: 1) { nodes { id } }
+                    }
+                  }
+                }
+              } }
+          `, { ids: slice.map(gid) }, 'orderDetails');
+
+          for (const n of (data?.data?.nodes || [])) {
+            if (!n?.id) continue;
+            const a = n.shippingAddress;
+
+            // R7 — أحدث دورة **غير ملغية**، بترتيب createdAt. تجميع كل الدورات
+            // أو الاعتماد على ترتيب المصفوفة بيدّي نوع أوردر عشوائي على أوردر
+            // عنده دورة قديمة مقفولة + دورة جديدة.
+            const cycles = (n.returns?.nodes || [])
+              .filter(r => !['CANCELED', 'DECLINED'].includes(r.status))
+              .sort((x, y) => new Date(x.createdAt) - new Date(y.createdAt));
+            const cycle = cycles[cycles.length - 1] || null;
+            if (n.returns?.pageInfo?.hasNextPage === true) truncatedReturns = true;
+
+            const rawOutstanding = n.totalOutstandingSet?.shopMoney?.amount;
+
+            details[numericId(n.id)] = {
+              orderId:      numericId(n.id),   // v3.7.0 (worker-builder Step 5) — نفس القاعدة
+              orderName:    n.name,
+              customerName: a ? `${a.firstName || ''} ${a.lastName || ''}`.trim() || null : null,
+              phone:        a?.phone || null,
+              address:      a ? [a.address1, a.address2, a.city, a.province].filter(Boolean).join('، ') : null,
+              // 🔴 موقّع: موجب = المندوب بيحصّل · سالب = المندوب بيدفع للعميل
+              //    · صفر = مدفوع بالكامل، مفيش حركة فلوس عند الباب.
+              //    · null = شوبيفاي ما رجّعتش الرقم (مش صفر).
+              cod: rawOutstanding == null ? null : parseFloat(rawOutstanding).toFixed(2),
+              orderType: !cycle ? 'normal'
+                       : ((cycle.exchangeLineItems?.nodes || []).length > 0 ? 'exchange' : 'return'),
+            };
+          }
         }
-        return json({ ok: true, details }, 200, request);
+
+        // §STATUS::orderDetails::missing — الـ IDs اللي شوبيفاي ما رجّعتهاش.
+        // من غير السطر ده الواجهة بترسم صف بـ«—» و COD صفر وبتضيفه للإجمالي
+        // **في صمت** — أوردر بيختفي من المجموع بلا أي إشارة.
+        const missing = orderIds.filter(id => !details[String(id)]);
+
+        return json({ ok: true, details, missing, truncatedReturns }, 200, request);
       }
 
       // §STATUS::searchCourierOrders — orders of ONE courier eligible for a
