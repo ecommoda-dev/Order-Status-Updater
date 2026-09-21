@@ -1,0 +1,21 @@
+{
+  "tool": "order_status",
+  "since": null,
+  "types": {
+    "login": {
+      "result": null,
+      "stage": null,
+      "desc": "دخول موظف"
+    },
+    "logout": {
+      "result": null,
+      "stage": null,
+      "desc": "خروج موظف"
+    },
+    "update": {
+      "result": "error",
+      "stage": null,
+      "desc": "تحديث حالة الأوردر يدويًا"
+    }
+  }
+}
