@@ -15,7 +15,7 @@
 | `index.js` | كود الـ Worker — بينشر على Cloudflare عبر Workers Builds |
 | `wrangler.toml` | اسم الـ Worker + D1 binding + الـ vars |
 | `index.html` | الواجهة — بتتنشر على GitHub Pages |
-| `Index.html` | صفحة تحويل للرابط القديم (بحرف كبير) |
+| ~~`Index.html`~~ | اتشالت — 23-09-2026، قرار أحمد. الرابط الوحيد: `https://ecommoda-dev.github.io/Order-Status-Updater/` |
 | `CLAUDE.md` | قواعد الأداة وفخاخها — بيتحمّل تلقائي في كل جلسة Claude |
 | `order-status-updater-review.md` | مراجعة عميقة 08-09-2026 — ٤٢ بند بدليل من الإنتاج + حالة كل واحد |
 | `skills-updates-2026-09-08.md` | التعديلات المطلوبة في المهارات (تتنفّذ في جلسة منفصلة) |
