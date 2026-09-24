@@ -457,12 +457,33 @@ git show b1e37b4:3.5.0.html
 
 | المهارة | الإصدار وقت آخر تعديل |
 |---|---|
-| ecommoda-worker-builder | v2.1.0 |
+| ecommoda-worker-builder | v3.7.0 |
 | ecommoda-html-builder | v6.6.0 |
-| ecommoda-constants | v1.4.0 |
+| ecommoda-constants | v3.1.0 |
 | ecommoda-order-lifecycle | v1.8.0 |
 
-آخر مطابقة: 16-09-2026 · `index.js` v4.7.0 · `index.html` v4.6.0
+آخر مطابقة: 24-09-2026 · `index.js` v4.7.1 · `index.html` v4.6.0
+
+## 🔴 الطبقة ٥ — الحارس الديناميكي لقيم اللوج (24-09-2026 · v4.7.1)
+
+`check-log-values.mjs` اتستبدل بالنسخة المصلَّحة (`ecommoda-worker-builder`
+Step 7): النسخة القديمة كانت بتدوّر على `type:` بنقطتين بس، فـ object
+shorthand (`{ tool, type }`) كان بيعدّي في صمت وبيدّي `exit 0` وهو شايف جزء
+من القيم بس. الأداة دي **مالهاش** الفخ ده أصلًا — التلات نداءات
+(`login`/`logout`/`update`) كلهم `type:` نص ثابت صريح، ومفيش `writeLogsBatch`
+ولا أنكور تاني في الملف.
+
+**اتنفّذ:**
+- `LOG_REGISTRY` (§LOG-REG فوق `writeLog` في `index.js`) — `order_status`:
+  `login` · `logout` · `update`، مبني من `log-values.json`.
+- `writeLog` بقى بيكتب الصف **دايمًا**، ويعلّم `extra._unregistered = true`
+  + UPSERT صامت في `log_value_alerts` (جدول مشترك على مستوى الستاك، اتعمل
+  قبل كده — ما اتعملش هنا `CREATE TABLE`) لو الزوج `(tool, type)` مش مسجّل.
+  **مفيش رفض كتابة أبدًا.**
+- `dynamicTypes` فضلت فاضية في `log-values.json` — مفيش قيمة `type` بتتحسب
+  وقت التشغيل في الملف ده.
+- `node check-log-values.mjs` بعد التحديث: **exit 0** (٣ قيمة مسجّلة · ٣
+  مستخدمة · صفر تحذيرات).
 🔴 **معلّق ومطلوب قبل أي طباعة مانفيست جديدة — Promote للـ Worker v4.7.0.**
 من غيره الواجهة v4.6.0 هتولّع «الـ Worker نسخة قديمة» (`MIN_WORKER_VERSION = 4.7.0`)
 و**الأخطر**: لو حد طبع من واجهة قديمة متكاشة في متصفح، الورقة هتخرج بأرقام

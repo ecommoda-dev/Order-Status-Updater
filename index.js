@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// Order Status Updater — Worker  v4.7.0
-// skills: worker-builder v2.1.0 · constants v1.4.0 · order-lifecycle v1.8.0 — 15-09-2026
+// Order Status Updater — Worker  v4.7.1
+// skills: worker-builder v3.7.0 · constants v3.1.0 · order-lifecycle v1.8.0 — 24-09-2026
 // Account : ecommoda-dev   |   D1: ecommoda-dev-logs (binding: DB)
 // ---------------------------------------------------------------------------
 // 🔗🔗 قارئ خارجي لسجل الأداة دي — اقرا قبل أي تعديل على شكل `extra`
@@ -59,6 +59,17 @@
 //      بحتة ومابيكتبش أي صف D1، والقارئ الخارجي (أداة التحصيل) مالوش أي
 //      علاقة بالمسار ده. §TODAY-IMPORT **ما اتلمسش**.
 // ---------------------------------------------------------------------------
+// v4.7.1 — الطبقة ٥: الحارس الديناميكي لقيم اللوج (24-09-2026،
+//          ecommoda-worker-builder Step 7-ج):
+//   🆕 check-log-values.mjs اتستبدل بالنسخة المصلَّحة (كانت بتدوّر على
+//      `type:` بنقطتين بس، فـ object shorthand كان بيعدّي في صمت).
+//   🆕 §LOG-REG فوق writeLog — LOG_REGISTRY مبني من log-values.json
+//      (login · logout · update). قيمة (tool,type) غير مسجّلة بتتكتب
+//      عادي مع extra._unregistered=true + UPSERT صامت في log_value_alerts
+//      بعد الكتابة — مفيش رفض كتابة أبدًا.
+//   ✅ مفيش قيم ديناميكية أو shorthand في الملف ده — التلات نداءات
+//      (login/logout/update) كلهم type: نص ثابت صريح، فـ dynamicTypes
+//      فضلت فاضية.
 // v4.6.0 — كتابة custom.package_whereabouts_s1/_s2 (15-09-2026، طلب أحمد):
 //   🆕 كل تحديث حالة بيكتب معاه (best-effort، نداء منفصل بعد كتابة الحالة —
 //   فشله warning مش error):
@@ -371,7 +382,7 @@
 
 const TOOL_NAME   = 'order_status';
 const API_VERSION = '2026-01';
-const VERSION     = '4.7.0';
+const VERSION     = '4.7.1';
 
 // §CONSTANTS::logExport — سقف تصدير السجل. اسم مسمّى مش رقم في نص استعلام:
 // القيمة دي بترجع للواجهة كـ `cap` عشان الواجهة **ماتكتبهاش عندها** وتتعتّق.
@@ -738,7 +749,65 @@ async function registerPin(db, username, pin) {
   return true;
 }
 
+// ════════════════════════════════════════════════════════════
+// §LOG-REG — الحارس الديناميكي لقيم اللوج (الطبقة ٥) — v4.7.1
+// ════════════════════════════════════════════════════════════
+// قطعة الأداة دي بس من log-values.json اللي جنبها — بتتحدّث معاه في نفس
+// الـ commit (ecommoda-worker-builder Step 7-ج). ممنوع شحن سجل الـ٣٢ أداة هنا.
+const LOG_REGISTRY = {
+  order_status: new Set(['login', 'logout', 'update']),
+};
+
+const isRegisteredLogValue = (tool, type) => !!LOG_REGISTRY[tool]?.has(type);
+
+// UPSERT على (source_tool, tool, type) — صف واحد لكل قيمة، hits بيعدّ.
+// الحدث الكامل مش بيضيع: الصف الأصلي موجود في logs وعليه _unregistered،
+// والجدول ده فهرس مش سجل تاني — عشان كده dedupe مش صف لكل حدث.
+const LOG_ALERT_SQL = `
+  INSERT INTO log_value_alerts
+    (source_tool, tool, type, first_seen, last_seen, hits,
+     worker_version, sample_order_name, sample_employee, sample_notes)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(source_tool, tool, type) DO UPDATE SET
+    last_seen         = excluded.last_seen,
+    hits              = log_value_alerts.hits + excluded.hits,
+    worker_version    = excluded.worker_version,
+    sample_order_name = excluded.sample_order_name,
+    sample_employee   = excluded.sample_employee,
+    sample_notes      = excluded.sample_notes,
+    status            = CASE WHEN log_value_alerts.status = 'ignored'
+                             THEN 'ignored' ELSE 'open' END
+`;
+
+// فشل التنبيه ممنوع يأثر على أي حاجة — try/catch صامت. بتجمّع التكرار جوّه
+// نفس الدفعة في صف واحد (hits) قبل ما تكتب.
+async function noteUnregisteredLogValues(db, entries) {
+  const byPair = new Map();
+  for (const e of entries) {
+    const key = `${e.tool}\u0000${e.type}`;
+    const acc = byPair.get(key);
+    if (acc) { acc.hits++; continue; }
+    byPair.set(key, { entry: e, hits: 1 });
+  }
+  const now = new Date().toISOString();
+  for (const { entry, hits } of byPair.values()) {
+    try {
+      await db.prepare(LOG_ALERT_SQL).bind(
+        TOOL_NAME, entry.tool ?? '(بدون tool)', entry.type ?? '(بدون type)',
+        now, now, hits, VERSION,
+        entry.orderName ?? null, entry.employee ?? null,
+        entry.notes ? String(entry.notes).slice(0, 200) : null,
+      ).run();
+    } catch (e) { /* متعمّد: التنبيه فهرس، وفشله أهون من تعطيل الأداة */ }
+  }
+}
+
 async function writeLog(db, entry) {
+  const unregistered = !isRegisteredLogValue(entry.tool, entry.type);
+  const extra = unregistered
+    ? { ...(entry.extra || {}), _unregistered: true }
+    : entry.extra;
+
   await db.prepare(`
     INSERT INTO logs
       (timestamp, tool, type, employee, order_id, order_name,
@@ -757,8 +826,11 @@ async function writeLog(db, entry) {
     entry.valueBefore  ?? null,
     entry.valueAfter   ?? null,
     entry.notes        ?? null,
-    entry.extra ? JSON.stringify(entry.extra) : null
+    extra ? JSON.stringify(extra) : null
   ).run();
+
+  // بعد الكتابة، مش قبلها — الصف الأصلي بيتكتب دايمًا، مفيش رفض كتابة أبدًا.
+  if (unregistered) await noteUnregisteredLogValues(db, [entry]);
 }
 
 // ─── §SHARED::logFilters — shared WHERE-clause builder ───
