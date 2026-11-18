@@ -21,6 +21,17 @@
 // أو في TOOL_NAME: افتح §TODAY-IMPORT في cod-payment-center-worker وعدّله
 // معاه في نفس التسليم. الأداتين على نفس قاعدة D1 (ecommoda-dev-logs).
 // ---------------------------------------------------------------------------
+// v4.8.0 — فلاتر السجل بقت على معيار الجداول v8.6.0 (طلب أحمد 18-11-2026):
+//   • orders=a,b  توكنز رقم الأوردر (OR، تطابق جزئي) — جنب `search` القديم.
+//   • timeFrom/timeTo (HH:MM بتوقيت القاهرة) — وقت اليوم محسوب في SQL بإزاحة كل صف
+//     (صيفي/شتوي من Intl) مش ثابت.
+//   • okIn/okFrom/okTo · warnIn/… · errIn/… — فلاتر عدّادات ✓/⚠/✗ على **الدفعة كلها**
+//     (batchId، أو `single-<id>` للصف بلا دفعة) بغض النظر عن باقي الفلاتر.
+//   • sortKey جديد: time · ok · warn · err.
+//   • get_log_suggest (اقتراحات رقم الأوردر) · get_log_num_values (قيم ✓/⚠/✗).
+//   • get_logs بيرجّع batchStats { batchId: {n, ok, warn, err} } للدفعات الظاهرة —
+//     عدّادات الدفعة الكاملة حتى لو متقسّمة على صفحتين أو متفلترة بنتيجة.
+//
 // v4.7.0 — عمود COD في المانفيست كان بيطبع رقم مخترع لأوردرات الاستبدال
 //          والاسترجاع + عمود «نوع الأوردر» (16-09-2026، بلاغ أحمد):
 //
@@ -382,7 +393,7 @@
 
 const TOOL_NAME   = 'order_status';
 const API_VERSION = '2026-01';
-const VERSION     = '4.7.1';
+const VERSION     = '4.8.0';
 
 // §CONSTANTS::logExport — سقف تصدير السجل. اسم مسمّى مش رقم في نص استعلام:
 // القيمة دي بترجع للواجهة كـ `cap` عشان الواجهة **ماتكتبهاش عندها** وتتعتّق.
@@ -869,7 +880,74 @@ function cairoDayBoundsUTC(dateStr) {
 // §SHARED::logFilters::result — v3.3.0 (طلب صريح: فلتر عمود "النتيجة" في
 // تاب السجل). extra.result بيتكتب على كل صف منذ الأساس (success/error، ودلوقتي
 // كمان warning) — فلا حاجة لأي fallback زي فلتر الحالة، القيمة موجودة دايمًا.
-function buildLogFilterSQL({ tool = null, employee = null, status = null, courier = null, result = null, search = null, dateFrom = null, dateTo = null } = {}) {
+// ─── §SHARED::logFilters::v4.8.0 — طلب أحمد 18-11-2026 (html-builder v8.6.0) ───
+const LOG_FILTER_KEYS = [
+  'employee', 'status', 'courier', 'result', 'search', 'orders', 'dateFrom', 'dateTo', 'timeFrom', 'timeTo',
+  'okIn', 'okFrom', 'okTo', 'warnIn', 'warnFrom', 'warnTo', 'errIn', 'errFrom', 'errTo',
+];
+function readLogFilters(url) {
+  const f = {};
+  for (const k of LOG_FILTER_KEYS) f[k] = url.searchParams.get(k) || null;
+  return f;
+}
+
+// مفتاح الدفعة — نفس مفتاح تجميع الواجهة بالظبط (`x.batchId || 'single-' + id`)
+const jx = path => `(CASE WHEN json_valid(extra) THEN json_extract(extra, '$.${path}') END)`;
+const BATCH_KEY_SQL = `COALESCE(${jx('batchId')}, 'single-' || id)`;
+// عدّادات الدفعة: err = أي نتيجة مش success/warning (بما فيها الفاضية) — نفس حساب الواجهة (rows − ok − warn)
+const BATCH_AGG_SQL = `(SELECT ${BATCH_KEY_SQL} AS bk,
+    SUM(CASE WHEN ${jx('result')} = 'success' THEN 1 ELSE 0 END) AS ok,
+    SUM(CASE WHEN ${jx('result')} = 'warning' THEN 1 ELSE 0 END) AS warn,
+    SUM(CASE WHEN COALESCE(${jx('result')}, '') NOT IN ('success', 'warning') THEN 1 ELSE 0 END) AS err,
+    COUNT(*) AS n,
+    MAX(timestamp) AS last
+  FROM logs WHERE tool = ? AND type NOT IN ('login', 'logout') GROUP BY bk)`;
+const NUM_FIELDS = ['ok', 'warn', 'err'];
+
+const digitsOnly = v => String(v == null ? '' : v).replace(/[٠-٩]/g, c => String(c.charCodeAt(0) - 1632)).replace(/\D+/g, '');
+const numOrNull = v => { if (v == null || v === '') return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
+const hmToMin = hm => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(hm || '')); if (!m) return null; const h = +m[1], mi = +m[2]; return (h > 23 || mi > 59) ? null : h * 60 + mi; };
+
+// تحوّلات إزاحة القاهرة (صيفي/شتوي) بتتحسب من Intl مرة واحدة لكل isolate: [{ at: ISO, off: دقايق }]
+let _cairoTransitions = null;
+function cairoTransitions() {
+  if (_cairoTransitions) return _cairoTransitions;
+  const out = [], step = 6 * 3600000;
+  let t = Date.UTC(2020, 0, 1);
+  const end = Date.UTC(new Date().getUTCFullYear() + 3, 0, 1);
+  let prev = cairoOffsetMinutes(new Date(t));
+  const base = prev;
+  for (t += step; t < end; t += step) {
+    const off = cairoOffsetMinutes(new Date(t));
+    if (off === prev) continue;
+    let lo = t - step, hi = t;                       // أول دقيقة اتغيّرت فيها الإزاحة
+    while (hi - lo > 60000) { const mid = Math.floor((lo + hi) / 2); if (cairoOffsetMinutes(new Date(mid)) === prev) lo = mid; else hi = mid; }
+    out.push({ at: new Date(hi).toISOString(), off });
+    prev = off;
+  }
+  _cairoTransitions = { base, list: out };
+  return _cairoTransitions;
+}
+// دقيقة اليوم (0–1439) بتوقيت القاهرة لعمود `timestamp` — بإزاحة كل صف مش إزاحة ثابتة
+function cairoMinuteOfDaySQL() {
+  const { base, list } = cairoTransitions();
+  let off = String(base);
+  for (const tr of list) off = `CASE WHEN timestamp >= '${tr.at}' THEN ${tr.off} ELSE ${off} END`;
+  return `(((CAST(strftime('%s', timestamp) AS INTEGER) + (${off}) * 60) % 86400) / 60)`;
+}
+
+function numCondition(f, field) {
+  const ins = parseListParam(f[field + 'In']).map(Number).filter(Number.isFinite);
+  if (ins.length) return { sql: `${field} IN (${ins.map(() => '?').join(',')})`, binds: ins };
+  const from = numOrNull(f[field + 'From']), to = numOrNull(f[field + 'To']);
+  const parts = [], binds = [];
+  if (from !== null) { parts.push(`${field} >= ?`); binds.push(from); }
+  if (to   !== null) { parts.push(`${field} <= ?`); binds.push(to); }
+  return parts.length ? { sql: parts.join(' AND '), binds } : null;
+}
+
+function buildLogFilterSQL(f = {}) {
+  const { tool = null, employee = null, status = null, courier = null, result = null, search = null, dateFrom = null, dateTo = null } = f;
   let sql = "FROM logs WHERE type NOT IN ('login','logout')";
   const b = [];
 
@@ -885,21 +963,21 @@ function buildLogFilterSQL({ tool = null, employee = null, status = null, courie
   if (statuses.length) {
     const ph = statuses.map(() => '?').join(',');
     sql += ` AND (
-      json_extract(extra, '$.targetLabel') IN (${ph})
-      OR REPLACE(json_extract(extra, '$.specifier'), '_S2', '') IN (${ph})
+      ${jx('targetLabel')} IN (${ph})
+      OR REPLACE(${jx('specifier')}, '_S2', '') IN (${ph})
     )`;
     b.push(...statuses, ...statuses);
   }
 
   const couriers = parseListParam(courier);
   if (couriers.length) {
-    sql += ` AND json_extract(extra, '$.courier') IN (${couriers.map(() => '?').join(',')})`;
+    sql += ` AND ${jx('courier')} IN (${couriers.map(() => '?').join(',')})`;
     b.push(...couriers);
   }
 
   const results = parseListParam(result);
   if (results.length) {
-    sql += ` AND json_extract(extra, '$.result') IN (${results.map(() => '?').join(',')})`;
+    sql += ` AND ${jx('result')} IN (${results.map(() => '?').join(',')})`;
     b.push(...results);
   }
 
@@ -911,6 +989,13 @@ function buildLogFilterSQL({ tool = null, employee = null, status = null, courie
     b.push(`%${esc}%`, `%${esc}%`);
   }
 
+  // v4.8.0 — توكنز أرقام الأوردرات: OR بينهم، تطابق جزئي على order_name (أرقام بس — مفيش LIKE خام)
+  const orders = [...new Set(parseListParam(f.orders).map(digitsOnly).filter(Boolean))].slice(0, 50);
+  if (orders.length) {
+    sql += ` AND (${orders.map(() => "order_name LIKE ? ESCAPE '\\'").join(' OR ')})`;
+    b.push(...orders.map(t => `%${t}%`));
+  }
+
   if (dateFrom) {
     const { start } = cairoDayBoundsUTC(dateFrom);
     sql += ' AND timestamp >= ?';
@@ -920,6 +1005,21 @@ function buildLogFilterSQL({ tool = null, employee = null, status = null, courie
     const { end } = cairoDayBoundsUTC(dateTo);
     sql += ' AND timestamp <= ?';
     b.push(end);
+  }
+
+  // v4.8.0 — وقت اليوم بتوقيت القاهرة (مستقل عن التاريخ — AND). "من" بعد "إلى" = لا نتايج (الواجهة بتنبّه).
+  const tFrom = hmToMin(f.timeFrom), tTo = hmToMin(f.timeTo);
+  if (tFrom !== null || tTo !== null) {
+    const mod = cairoMinuteOfDaySQL();
+    if (tFrom !== null) { sql += ` AND ${mod} >= ?`; b.push(tFrom); }
+    if (tTo   !== null) { sql += ` AND ${mod} <= ?`; b.push(tTo); }
+  }
+
+  // v4.8.0 — عدّادات الدفعة (✓/⚠/✗): الفلتر على الدفعة كلها مش على الصفوف الظاهرة
+  const conds = NUM_FIELDS.map(k => numCondition(f, k)).filter(Boolean);
+  if (conds.length) {
+    sql += ` AND ${BATCH_KEY_SQL} IN (SELECT bk FROM ${BATCH_AGG_SQL} WHERE ${conds.map(c => c.sql).join(' AND ')})`;
+    b.push(f.tool || TOOL_NAME, ...conds.flatMap(c => c.binds));
   }
 
   return { sql, binds: b };
@@ -937,52 +1037,58 @@ function buildLogFilterSQL({ tool = null, employee = null, status = null, courie
 const LOG_SORT_COLUMNS = {
   timestamp: 'timestamp',
   employee:  'employee',
-  courier:   "json_extract(extra, '$.courier')",
-  status:    "COALESCE(NULLIF(json_extract(extra, '$.targetLabel'), ''), REPLACE(json_extract(extra, '$.specifier'), '_S2', ''))",
+  // v4.8.0 — jx() بدل json_extract الخام: صف extra باظ كان بيوقّع الاستعلام كله (malformed JSON)
+  courier:   jx('courier'),
+  status:    `COALESCE(NULLIF(${jx('targetLabel')}, ''), REPLACE(${jx('specifier')}, '_S2', ''))`,
 };
-
+// v4.8.0 — ترتيب بوقت اليوم (عمود «الوقت») وبعدّادات الدفعة (✓/⚠/✗). عدّادات الدفعة
+// بتتجمّع من JOIN على BATCH_AGG_SQL، والترتيب الثانوي بآخر طابع للدفعة عشان صفوف
+// الدفعة الواحدة تفضل متجاورة (الواجهة بتجمّعهم بالتجاور).
 function buildLogSortSQL(sortKey, sortDir) {
-  const col = LOG_SORT_COLUMNS[sortKey] || LOG_SORT_COLUMNS.timestamp;
   const dir = sortDir === 'asc' ? 'ASC' : 'DESC';
+  if (sortKey === 'time')
+    return { join: false, order: `ORDER BY ${cairoMinuteOfDaySQL()} ${dir}, timestamp DESC` };
+  if (sortKey === 'n' || NUM_FIELDS.includes(sortKey))
+    return { join: true, order: `ORDER BY a.${sortKey} ${dir}, a.last DESC, ${BATCH_KEY_SQL}, timestamp DESC` };
   // ترتيب ثانوي بالتاريخ دايمًا — عشان صفوف متساوية القيمة (زي كل النتايج success)
   // يفضل ترتيبها ثابت بدل ما يتلخبط بين الصفحات.
-  return sortKey && LOG_SORT_COLUMNS[sortKey]
-    ? `ORDER BY ${col} ${dir}, timestamp DESC`
-    : `ORDER BY timestamp DESC`;
+  return {
+    join: false,
+    order: sortKey && LOG_SORT_COLUMNS[sortKey]
+      ? `ORDER BY ${LOG_SORT_COLUMNS[sortKey]} ${dir}, timestamp DESC`
+      : 'ORDER BY timestamp DESC',
+  };
 }
 
-async function getLogs(db, {
-  tool     = null,
-  employee = null,
-  status   = null,
-  courier  = null,
-  result   = null,
-  type     = null,
-  search   = null,
-  dateFrom = null,
-  dateTo   = null,
-  sortKey  = null,
-  sortDir  = null,
-  limit    = 100,
-  offset   = 0,
-} = {}) {
-  const { sql: whereSql, binds } = buildLogFilterSQL({ tool, employee, status, courier, result, search, dateFrom, dateTo });
-  let sql = `SELECT * ${whereSql}`;
-  const b = binds.slice();
+async function getLogs(db, f = {}) {
+  const { type = null, sortKey = null, sortDir = null, limit = 100, offset = 0 } = f;
+  const { sql: whereSql, binds } = buildLogFilterSQL(f);
+  const sort = buildLogSortSQL(sortKey, sortDir);
+  const b = [];
+  let sql;
+  if (sort.join) {
+    // `FROM logs WHERE …` → `FROM logs LEFT JOIN (agg) a ON a.bk = <مفتاح الدفعة> WHERE …`
+    sql = `SELECT logs.* FROM logs LEFT JOIN ${BATCH_AGG_SQL} a ON a.bk = ${BATCH_KEY_SQL} ${whereSql.slice('FROM logs'.length)}`;
+    b.push(f.tool || TOOL_NAME, ...binds);
+  } else {
+    sql = `SELECT * ${whereSql}`;
+    b.push(...binds);
+  }
   if (type) { sql += ' AND type = ?'; b.push(type); }
-  sql += ` ${buildLogSortSQL(sortKey, sortDir)} LIMIT ? OFFSET ?`;
+  sql += ` ${sort.order} LIMIT ? OFFSET ?`;
   b.push(Math.min(limit, 100), offset);
 
   return (await db.prepare(sql).bind(...b).all()).results;
 }
 
-// ─── §SHARED::batchSizes — v4.5.0 ───
+// ─── §SHARED::batchSizes — v4.5.0 · batchStats v4.8.0 ───
 // الصفحة ١٠٠ صف، والدفعة ممكن توقع على الحد فتتعرض **مجموعتين في صفحتين**
 // بعدادات ✓/⚠/✗ مقسومة، وزرار الطباعة يطبع نصها — كله من غير أي إشارة.
-// بنرجّع العدد الكامل لكل batchId ظاهر في الصفحة عشان الواجهة تقارن وتوسم.
+// بنرجّع العدد الكامل (n) وعدّادات الدفعة الكاملة (ok/warn/err) لكل batchId ظاهر
+// في الصفحة — الواجهة بتعرض العدّادات دي (مش عدّ الصفوف الظاهرة) وبتوسم المقسومة.
 // النافذة الزمنية (±ساعة حوالين صفوف الصفحة) بتحدّ الفحص: صفوف الدفعة الواحدة
 // بتتكتب في نفس النداء يعني في حدود ثواني، فساعة هامش آمنة جدًا.
-async function getBatchSizes(db, tool, entries) {
+async function getBatchStats(db, tool, entries) {
   const ids = [...new Set(entries.map(e => {
     try { return JSON.parse(e.extra || '{}').batchId || null; } catch { return null; }
   }).filter(Boolean))];
@@ -995,47 +1101,53 @@ async function getBatchSizes(db, tool, entries) {
 
   const ph = ids.map(() => '?').join(',');
   const rows = await db.prepare(
-    `SELECT json_extract(extra, '$.batchId') AS b, COUNT(*) AS n FROM logs
+    `SELECT ${jx('batchId')} AS b, COUNT(*) AS n,
+            SUM(CASE WHEN ${jx('result')} = 'success' THEN 1 ELSE 0 END) AS ok,
+            SUM(CASE WHEN ${jx('result')} = 'warning' THEN 1 ELSE 0 END) AS warn
+       FROM logs
       WHERE tool = ? AND timestamp >= ? AND timestamp <= ?
-        AND json_extract(extra, '$.batchId') IN (${ph}) GROUP BY b`
+        AND ${jx('batchId')} IN (${ph}) GROUP BY b`
   ).bind(tool, lo, hi, ...ids).all();
 
   const out = {};
-  for (const r of (rows.results || [])) if (r.b) out[r.b] = r.n;
+  for (const r of (rows.results || [])) if (r.b) out[r.b] = { n: r.n, ok: r.ok || 0, warn: r.warn || 0, err: r.n - (r.ok || 0) - (r.warn || 0) };
   return out;
 }
 
-async function getLogsCount(db, {
-  tool     = null,
-  employee = null,
-  status   = null,
-  courier  = null,
-  result   = null,
-  search   = null,
-  dateFrom = null,
-  dateTo   = null,
-} = {}) {
-  const { sql: whereSql, binds } = buildLogFilterSQL({ tool, employee, status, courier, result, search, dateFrom, dateTo });
-  const sql = `SELECT COUNT(*) as total ${whereSql}`;
-
-  const row = await db.prepare(sql).bind(...binds).first();
+async function getLogsCount(db, f = {}) {
+  const { sql: whereSql, binds } = buildLogFilterSQL(f);
+  const row = await db.prepare(`SELECT COUNT(*) as total ${whereSql}`).bind(...binds).first();
   return row?.total ?? 0;
 }
 
-async function getLogsExport(db, {
-  tool     = null,
-  employee = null,
-  status   = null,
-  courier  = null,
-  result   = null,
-  search   = null,
-  dateFrom = null,
-  dateTo   = null,
-} = {}) {
-  const { sql: whereSql, binds } = buildLogFilterSQL({ tool, employee, status, courier, result, search, dateFrom, dateTo });
+async function getLogsExport(db, f = {}) {
+  const { sql: whereSql, binds } = buildLogFilterSQL(f);
   const sql = `SELECT * ${whereSql} ORDER BY timestamp DESC LIMIT ?`;
 
   return (await db.prepare(sql).bind(...binds, LOG_EXPORT_MAX).all()).results;
+}
+
+// ─── §SHARED::logSuggest — v4.8.0: اقتراحات رقم الأوردر (آخر جزء مكتوب) + عدد عملياته ───
+async function getLogSuggest(db, tool, q, exclude) {
+  const part = digitsOnly(String(q || '').split(/\D+/).filter(Boolean).pop() || '');
+  if (!part) return { suggestions: [], total: 0 };
+  const ex = parseListParam(exclude).map(digitsOnly).filter(Boolean);
+  let where = "tool = ? AND type NOT IN ('login','logout') AND order_name LIKE ? ESCAPE '\\'";
+  const b = [tool, `%${part}%`];
+  if (ex.length) { where += ` AND REPLACE(order_name, '#', '') NOT IN (${ex.map(() => '?').join(',')})`; b.push(...ex); }
+  const rows = (await db.prepare(
+    `SELECT order_name AS name, COUNT(*) AS count, MAX(timestamp) AS last FROM logs WHERE ${where}
+      GROUP BY order_name ORDER BY last DESC LIMIT 10`).bind(...b).all()).results;
+  const tot = await db.prepare(`SELECT COUNT(DISTINCT order_name) AS n FROM logs WHERE ${where}`).bind(...b).first();
+  return { suggestions: rows.map(r => ({ name: r.name, count: r.count })), total: tot?.n ?? 0 };
+}
+
+// ─── §SHARED::logNumValues — v4.8.0: القيم الموجودة لعدّاد ✓/⚠/✗ + عدد الدفعات لكل قيمة ───
+async function getLogNumValues(db, tool, field) {
+  if (!NUM_FIELDS.includes(field)) throw new Error('field غير معروف');
+  const rows = (await db.prepare(
+    `SELECT ${field} AS v, COUNT(*) AS n FROM ${BATCH_AGG_SQL} GROUP BY ${field} ORDER BY ${field}`).bind(tool).all()).results;
+  return rows.map(r => ({ v: r.v, n: r.n }));
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -2570,57 +2682,37 @@ export default {
 
       if (action === 'get_logs') {
         assertEnv(env);   // v4.5.0
-        const employee = url.searchParams.get('employee') || null;
-        const status   = url.searchParams.get('status')   || null;
-        const courier  = url.searchParams.get('courier')  || null;
-        const result   = url.searchParams.get('result')   || null;
-        const search   = url.searchParams.get('search')   || null;
-        const dateFrom = url.searchParams.get('dateFrom')  || null;
-        const dateTo   = url.searchParams.get('dateTo')    || null;
-        const sortKey  = url.searchParams.get('sortKey')   || null;   // v3.7.0 — data-table-standard § 8
-        const sortDir  = url.searchParams.get('sortDir')   || null;
+        const f      = { tool: TOOL_NAME, ...readLogFilters(url) };
+        const sortKey = url.searchParams.get('sortKey') || null;   // v3.7.0 — data-table-standard § 8
+        const sortDir = url.searchParams.get('sortDir') || null;
         // v4.5.0 — حارس NaN: `?offset=abc` كان بيمرّر NaN للـ SQL ويرجّع خطأ
         // D1 خام في وش الموظف بدل صفحة فاضية.
         const limit    = intParam(url.searchParams.get('limit'),  100, 1, 100);
         const offset   = intParam(url.searchParams.get('offset'), 0,   0, Number.MAX_SAFE_INTEGER);
-        const entries  = await getLogs(env.DB, {
-          tool: TOOL_NAME, employee, status, courier, result, search, dateFrom, dateTo, sortKey, sortDir, limit, offset,
-        });
+        const entries  = await getLogs(env.DB, { ...f, sortKey, sortDir, limit, offset });
         // v4.5.0 — الحجم الكامل لكل دفعة ظاهرة في الصفحة، عشان الواجهة تكشف
         // الدفعة المقسومة على صفحتين بدل ما تعرضها كمجموعتين ناقصتين بصمت.
-        let batchSizes = {};
-        try { batchSizes = await getBatchSizes(env.DB, TOOL_NAME, entries); } catch { batchSizes = {}; }
-        return json({ ok: true, entries, batchSizes }, 200, request);
+        // v4.8.0 — ومعاه عدّادات الدفعة الكاملة (batchStats).
+        let batchStats = {}, batchSizes = {};
+        try {
+          batchStats = await getBatchStats(env.DB, TOOL_NAME, entries);
+          for (const [k, v] of Object.entries(batchStats)) batchSizes[k] = v.n;   // توافق خلفي
+        } catch { batchStats = {}; batchSizes = {}; }
+        return json({ ok: true, entries, batchSizes, batchStats }, 200, request);
       }
 
       if (action === 'get_logs_count') {
         assertEnv(env);   // v4.5.0
-        const employee = url.searchParams.get('employee') || null;
-        const status   = url.searchParams.get('status')   || null;
-        const courier  = url.searchParams.get('courier')  || null;
-        const result   = url.searchParams.get('result')   || null;
-        const search   = url.searchParams.get('search')   || null;
-        const dateFrom = url.searchParams.get('dateFrom')  || null;
-        const dateTo   = url.searchParams.get('dateTo')    || null;
-        const total    = await getLogsCount(env.DB, {
-          tool: TOOL_NAME, employee, status, courier, result, search, dateFrom, dateTo,
-        });
+        const total = await getLogsCount(env.DB, { tool: TOOL_NAME, ...readLogFilters(url) });
         return json({ ok: true, total }, 200, request);
       }
 
       if (action === 'get_logs_export') {
         assertEnv(env);   // v4.5.0
-        const employee = url.searchParams.get('employee') || null;
-        const status   = url.searchParams.get('status')   || null;
-        const courier  = url.searchParams.get('courier')  || null;
-        const result   = url.searchParams.get('result')   || null;
-        const search   = url.searchParams.get('search')   || null;
-        const dateFrom = url.searchParams.get('dateFrom')  || null;
-        const dateTo   = url.searchParams.get('dateTo')    || null;
         // ⚠️ العدّ بيتنادى **بالتوازي وبنفس الفلاتر بالظبط** — من غيره الواجهة
         // مش هتعرف إن الملف اتقص وهتقول "تم التصدير ✓" على ملف ناقص.
         // (worker-builder v2.0.0 🔴 · html-builder Standards #30)
-        const filters  = { tool: TOOL_NAME, employee, status, courier, result, search, dateFrom, dateTo };
+        const filters  = { tool: TOOL_NAME, ...readLogFilters(url) };
         const [entries, total] = await Promise.all([
           getLogsExport(env.DB, filters),
           getLogsCount(env.DB, filters),
@@ -2631,6 +2723,21 @@ export default {
           total,
           truncated: total > LOG_EXPORT_MAX,
         }, 200, request);
+      }
+
+      // v4.8.0 — اقتراحات رقم الأوردر (آخر 10 + العدد الكلي) · قراءة بحتة
+      if (action === 'get_log_suggest') {
+        assertEnv(env);
+        const r = await getLogSuggest(env.DB, TOOL_NAME, url.searchParams.get('q'), url.searchParams.get('exclude'));
+        return json({ ok: true, ...r }, 200, request);
+      }
+
+      // v4.8.0 — قيم عدّاد ✓/⚠/✗ (field = ok | warn | err) · قراءة بحتة
+      if (action === 'get_log_num_values') {
+        assertEnv(env);
+        const field = url.searchParams.get('field');
+        if (!NUM_FIELDS.includes(field)) return json({ ok: false, error: 'field لازم يكون ok أو warn أو err' }, 400, request);
+        return json({ ok: true, values: await getLogNumValues(env.DB, TOOL_NAME, field) }, 200, request);
       }
 
       return json({ ok: false, error: `action غير معروف: ${action}` }, 404, request);
