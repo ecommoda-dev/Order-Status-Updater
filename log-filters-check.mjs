@@ -73,6 +73,8 @@ const byOk = await api.getLogs(d1, F({ sortKey: 'ok', sortDir: 'desc' }));
 ok(byOk[0].extra.includes('"batchId":"A"') && byOk.slice(0, 8).every(r => r.extra.includes('"A"')), 'ترتيب ✓ تنازلي: دفعة A متجاورة وفي الأول');
 const byOkAsc = await api.getLogs(d1, F({ sortKey: 'ok', sortDir: 'asc' }));
 ok(!byOkAsc[0].extra.includes('"A"'), 'ترتيب ✓ تصاعدي: A في الآخر');
+const byN = await api.getLogs(d1, F({ sortKey: 'n', sortDir: 'desc' }));
+ok(byN.length > 0 && byN[0].extra.includes('"A"'), 'ترتيب «الأوردرات» (n) تنازلي: أكبر دفعة (A) في الأول');
 const byTime = await orders({ sortKey: 'time', sortDir: 'asc' });
 ok(byTime[0].startsWith('#370') && byTime[byTime.length-1] === '#48000' || byTime[byTime.length-1] === '#48001', `ترتيب الوقت تصاعدي: أول 10:30 وآخر 23:30 — ${byTime[0]} … ${byTime[byTime.length-1]}`);
 ok(JSON.stringify((await orders({ sortKey: 'timestamp', sortDir: 'asc' }))[0]) === '"#55555"', 'ترتيب التاريخ لسه شغال');

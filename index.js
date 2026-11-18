@@ -899,6 +899,7 @@ const BATCH_AGG_SQL = `(SELECT ${BATCH_KEY_SQL} AS bk,
     SUM(CASE WHEN ${jx('result')} = 'success' THEN 1 ELSE 0 END) AS ok,
     SUM(CASE WHEN ${jx('result')} = 'warning' THEN 1 ELSE 0 END) AS warn,
     SUM(CASE WHEN COALESCE(${jx('result')}, '') NOT IN ('success', 'warning') THEN 1 ELSE 0 END) AS err,
+    COUNT(*) AS n,
     MAX(timestamp) AS last
   FROM logs WHERE tool = ? AND type NOT IN ('login', 'logout') GROUP BY bk)`;
 const NUM_FIELDS = ['ok', 'warn', 'err'];
@@ -1047,7 +1048,7 @@ function buildLogSortSQL(sortKey, sortDir) {
   const dir = sortDir === 'asc' ? 'ASC' : 'DESC';
   if (sortKey === 'time')
     return { join: false, order: `ORDER BY ${cairoMinuteOfDaySQL()} ${dir}, timestamp DESC` };
-  if (NUM_FIELDS.includes(sortKey))
+  if (sortKey === 'n' || NUM_FIELDS.includes(sortKey))
     return { join: true, order: `ORDER BY a.${sortKey} ${dir}, a.last DESC, ${BATCH_KEY_SQL}, timestamp DESC` };
   // ترتيب ثانوي بالتاريخ دايمًا — عشان صفوف متساوية القيمة (زي كل النتايج success)
   // يفضل ترتيبها ثابت بدل ما يتلخبط بين الصفحات.
