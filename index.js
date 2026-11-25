@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// Order Status Updater — Worker  v4.7.1
+// Order Status Updater — Worker  v4.9.0
 // skills: worker-builder v3.7.0 · constants v3.1.0 · order-lifecycle v1.8.0 — 24-09-2026
 // Account : ecommoda-dev   |   D1: ecommoda-dev-logs (binding: DB)
 // ---------------------------------------------------------------------------
@@ -21,6 +21,21 @@
 // أو في TOOL_NAME: افتح §TODAY-IMPORT في cod-payment-center-worker وعدّله
 // معاه في نفس التسليم. الأداتين على نفس قاعدة D1 (ecommoda-dev-logs).
 // ---------------------------------------------------------------------------
+// v4.9.0 — مسار الشو روم (طلب أحمد 25-11-2026) — إضافي بالكامل، مفيش اسم قديم اتغيّر:
+//   • أوردر Ready (S1 فقط) بـ custom.zone = Show_Room و custom.courier = Showroom بيتحدّث
+//     مباشرة لـ Delivered أو Returned **بعد Fulfillment** — من غير ما يعدّي على Shipped.
+//     (الشو روم مفيهوش شحن فعلي: العميل بيعاين وبعدين بيستلم أو بيرفض.)
+//   • `update_status` بيقبل `flow:'showroom'` — الـ Worker هو اللي بيحكم على الأهلية من قراءة
+//     جديدة (Ready + S2 فاضي + zone/courier شو روم + مش ملغي)؛ الواجهة مابتحكمش.
+//   • 🔴 الـ Fulfillment **قبل أي كتابة** وفشله **بيوقف الأوردر** (error بلا أي تغيير) — عكس
+//     Shipped العادي (warning بعد الكتابة). ليه: الأوردر لسه Ready فإعادة المحاولة آمنة وبتتخطى
+//     الـ fulfillment لو اتعمل. Returned: fulfillment ← orderCancel(restock) ← الحالة، عشان
+//     event الـ Fulfillment يظهر على الأوردر (طلب أحمد).
+//   • `search_showroom_orders` (POST) — قايمة أوردرات الشو روم المؤهلة (للتاب الجديد).
+//   • `zone` اتضاف لرد `order_statuses` (حقل جديد مضاف).
+//   • `extra.flow = 'showroom'` على صفوف D1 — مفتاح **مضاف**. `targetLabel` و`courier` زي ما هم
+//     بالحرف (§TODAY-IMPORT في cod-payment-center-worker بيقراهم؛ الصف بيظهر في تسليمات
+//     Showroom النهارده). `extra.courier` = قيمة custom.courier الفعلية على الأوردر.
 // v4.8.0 — فلاتر السجل بقت على معيار الجداول v8.6.0 (طلب أحمد 18-11-2026):
 //   • orders=a,b  توكنز رقم الأوردر (OR، تطابق جزئي) — جنب `search` القديم.
 //   • timeFrom/timeTo (HH:MM بتوقيت القاهرة) — وقت اليوم محسوب في SQL بإزاحة كل صف
@@ -393,7 +408,7 @@
 
 const TOOL_NAME   = 'order_status';
 const API_VERSION = '2026-01';
-const VERSION     = '4.8.0';
+const VERSION     = '4.9.0';
 
 // §CONSTANTS::logExport — سقف تصدير السجل. اسم مسمّى مش رقم في نص استعلام:
 // القيمة دي بترجع للواجهة كـ `cap` عشان الواجهة **ماتكتبهاش عندها** وتتعتّق.
@@ -1321,6 +1336,7 @@ async function fetchOrderStatesChunk(env, token, orderIds, withReturns = false) 
           s1:      metafield(namespace: "custom", key: "manual_status") { value }
           s2:      metafield(namespace: "custom", key: "status_2_r_e")  { value }
           courier: metafield(namespace: "custom", key: "courier")       { value }
+          zone:    metafield(namespace: "custom", key: "zone")          { value }
           cancelReason: metafield(namespace: "custom", key: "cancel_manual_reason") { value }
           returnReason: metafield(namespace: "custom", key: "return_manual_reason") { value }
           ${returnsBlock}
@@ -1340,6 +1356,7 @@ async function fetchOrderStatesChunk(env, token, orderIds, withReturns = false) 
       s1:          n.s1?.value || null,
       s2:          n.s2?.value || null,
       courier:     n.courier?.value || null,
+      zone:        n.zone?.value || null,   // v4.9.0 — مسار الشو روم
       // v4.3.0 — الأسباب المسجّلة أصلاً على الأوردر (غالبًا خدمة العملاء كتبتها
       // قبل ما الأوردر يوصل لموظف العمليات). `.trim()` مقصود: ميتافيلد فيه
       // مسافات بس مايتحسبش سبب موجود.
@@ -1718,7 +1735,7 @@ function isTransitionValid(specifier, currentS1, currentS2) {
 // لو رمينا استثناء في النص، اللي اتنفّذ فعلاً بيفضل مسجَّل في actions بدل ما
 // يختفي (مثال حقيقي #50243: setMetafields نجحت وقطعة رجعت للمخزن، والمرتجع
 // التاني فشل — قبل الإصلاح ده كان بيتسجل "actions: []" رغم كده).
-async function applyDirect(env, token, order, specifier, courier, reason, actions, reasonChoices = null) {
+async function applyDirect(env, token, order, specifier, courier, reason, actions, reasonChoices = null, showroomFlow = false) {
   const spec     = SPECIFIERS[specifier];
   const warnings = [];
 
@@ -1758,6 +1775,11 @@ async function applyDirect(env, token, order, specifier, courier, reason, action
       );
     }
   }
+
+  // ─── v4.9.0 🏬 مسار الشو روم: Fulfillment **قبل أي كتابة** (fail-closed) ───
+  // فشله بيرمي → الأوردر بيفضل Ready بلا أي تغيير وإعادة المحاولة آمنة. وفي Returned
+  // ده بيسبق orderCancel، فـ event الـ Fulfillment بيظهر على الأوردر قبل الإلغاء.
+  if (showroomFlow) await fulfillBeforeWrite(env, token, order, actions);
 
   // ---- metafield writes (one batched mutation per order) ----
   const target = spec.field === 'S1' ? MF.S1 : MF.S2;
@@ -1960,6 +1982,85 @@ async function fetchReasonChoices(env, token) {
     try { return JSON.parse(ch.value); } catch { return []; }
   };
   return { cancel: pick(MF.CANCEL_REASON.key), return: pick(MF.RETURN_REASON.key) };
+}
+
+// ─── §SHOWROOM — مسار الشو روم (v4.9.0) ───
+// أوردر Ready بـ zone و courier شو روم → Delivered/Returned مباشرة بعد Fulfillment.
+// التطبيع: حروف صغيرة وبلا `_`/`-`/مسافات — `Show_Room` و`Showroom` نفس القيمة
+// (نفس تسامح Partial-Delivery). الحكم النهائي هنا مش في الواجهة.
+const SHOWROOM_LABELS = ['Delivered', 'Returned'];
+function isShowroomValue(v) {
+  return String(v || '').toLowerCase().replace(/[\s_\-]+/g, '') === 'showroom';
+}
+// بيرجّع سبب الرفض (نص) أو null لو مؤهل. S1 فقط — أوردر S2 مفتوح مرفوض بسببه.
+function showroomIneligibility(order) {
+  if (!order) return 'الأوردر غير موجود على Shopify';
+  if (order.isCancelled) return 'الأوردر ملغي على Shopify';
+  if ((order.s1 || '').trim() !== S1_STATUS.READY)
+    return `مسار الشو روم لأوردر S1="Ready" بس — الحالة الحالية "${order.s1 || 'فارغ'}"`;
+  if ((order.s2 || '').trim() !== '')
+    return `مسار الشو روم لـ S1 بس — الأوردر عليه S2="${order.s2}"`;
+  if (!isShowroomValue(order.zone))
+    return `المنطقة "${order.zone || 'فارغ'}" — مسار الشو روم لـ Show_Room بس`;
+  if (!isShowroomValue(order.courier))
+    return `المندوب "${order.courier || 'فارغ'}" — مسار الشو روم لمندوب Showroom بس`;
+  return null;
+}
+
+// Fulfillment قبل أي كتابة — بيرمي لو الأوردر مش هيبقى Fulfilled (fail-closed).
+// idempotent: لو مفيش FO مفتوح والأوردر FULFILLED بالفعل (محاولة سابقة وقعت بعد
+// الـ fulfillment) بيتخطّى. غير كده (مثلاً FO على hold) بيرمي بدل ما يكتب حالة كدابة.
+async function fulfillBeforeWrite(env, token, order, actions) {
+  const open = (order.fulfillmentOrders || []).filter(fo => fo.status === 'OPEN');
+  if (open.length) {
+    const f = await createFulfillment(env, token, open);   // بيرمي لو شوبيفاي ما أكدتش
+    actions.push(`fulfillmentCreate:${f?.id || '—'}(${open.length} FO)`);
+    return;
+  }
+  if (order.fulfillmentStatus === 'FULFILLED') {
+    actions.push('fulfillmentCreate:skipped-already-fulfilled');
+    return;
+  }
+  throw new Error(`مفيش fulfillment order مفتوح والأوردر مش Fulfilled (حالة التنفيذ: ${order.fulfillmentStatus || 'غير معروفة'}) — راجعه على شوبيفاي`);
+}
+
+// بحث أوردرات الشو روم المؤهلة: S1=Ready + zone/courier (القيمتين الممكنتين) — S2 الفاضي
+// بيتفلتر هنا (شوبيفاي مابتبحثش على ميتافيلد فاضي). التطبيع بيتعاد بعد الجلب.
+async function runShowroomSearch(env, token, since) {
+  const vals = ['Show_Room', 'Showroom'];
+  const or = key => '(' + vals.map(v => `metafields.custom.${key}:${JSON.stringify(v)}`).join(' OR ') + ')';
+  const q = [or('zone'), or('courier'), `metafields.custom.manual_status:"Ready"`, `created_at:>=${since}`].join(' AND ');
+  const orders = [];
+  let hasNextPage = true, endCursor = null, pageCount = 0;
+  while (hasNextPage && pageCount < SEARCH_MAX_PAGES) {
+    const data = await shopifyGQL(env, token, `
+      query ShowroomOrders($q: String!, $after: String) {
+        orders(first: 100, reverse: true, query: $q, after: $after) {
+          pageInfo { hasNextPage endCursor }
+          edges { node {
+            id name cancelledAt
+            s1:      metafield(namespace: "custom", key: "manual_status") { value }
+            s2:      metafield(namespace: "custom", key: "status_2_r_e")  { value }
+            courier: metafield(namespace: "custom", key: "courier")       { value }
+            zone:    metafield(namespace: "custom", key: "zone")          { value }
+          } }
+        } }
+    `, { q, after: endCursor }, 'showroomSearch');
+    for (const { node } of (data?.data?.orders?.edges || [])) {
+      if (!node?.id) continue;
+      const o = {
+        orderId: numericId(node.id), name: node.name,
+        s1: node.s1?.value || null, s2: node.s2?.value || null,
+        courier: node.courier?.value || null, zone: node.zone?.value || null,
+        isCancelled: !!node.cancelledAt,
+      };
+      if (!showroomIneligibility(o)) orders.push(o);
+    }
+    hasNextPage = data?.data?.orders?.pageInfo?.hasNextPage || false;
+    endCursor   = data?.data?.orders?.pageInfo?.endCursor   || null;
+    pageCount++;
+  }
+  return { orders, truncated: hasNextPage, pageCount };
 }
 
 // ─── §STATUS::runCourierSearch ───
@@ -2195,6 +2296,7 @@ export default {
           statuses[id] = {
             orderId: id,   // v3.7.0 (worker-builder Step 5) — numeric ID جنب البيانات، مش مفتاح الـ dict بس
             name: o.name, s1: o.s1, s2: o.s2, courier: o.courier,
+            zone: o.zone,   // v4.9.0 — الواجهة بتحكم بيه على أهلية مسار الشو روم (للعرض بس)
             isCancelled: o.isCancelled,
             fulfillmentStatus: o.fulfillmentStatus,
             // v4.3.0 — الواجهة بتستخدمهم عشان تعرض السبب المسجّل مسبقًا وتشيل
@@ -2369,6 +2471,19 @@ export default {
         }, 200, request);
       }
 
+      // §STATUS::searchShowroomOrders (v4.9.0) — أوردرات الشو روم المؤهلة لمسار
+      // Delivered/Returned المباشر. قراءة بحتة.
+      if (action === 'search_showroom_orders') {
+        if (request.method !== 'POST') return json({ error: 'POST required' }, 405, request);
+        assertEnv(env, 'shopify');
+        const { createdAfter = '' } = await request.json().catch(() => ({}));
+        const since = createdAfter || new Date(Date.now() - 180 * 86400000).toISOString().slice(0, 10);
+        const token = await getAccessToken(env);
+        const r = await runShowroomSearch(env, token, since);
+        return json({ ok: true, orders: r.orders, truncated: r.truncated, scannedPages: r.pageCount,
+                      since, cap: SEARCH_MAX_PAGES * 100 }, 200, request);
+      }
+
       // §STATUS::updateStatus — the main write endpoint — v3.3.0 (عطول B/C/٨/٩)
       // Body: { orderIds[], targetLabel, courier?, employee }
       // No specifier from the client anymore — resolveSpecifier() decides
@@ -2385,8 +2500,13 @@ export default {
         assertEnv(env, 'shopify');
         const body = await request.json().catch(() => ({}));
         const {
-          orderIds = [], targetLabel = '', courier = '', employee = '', reasons = {},
+          orderIds = [], targetLabel = '', employee = '', reasons = {},
         } = body;
+        const bodyCourier = body.courier || '';
+        // v4.9.0 — مسار الشو روم: Delivered/Returned بس، والمندوب بيتاخد من الأوردر نفسه.
+        const showroomFlow = body.flow === 'showroom';
+        if (showroomFlow && !SHOWROOM_LABELS.includes(targetLabel))
+          return json({ ok: false, error: `مسار الشو روم لـ Delivered/Returned بس — مش ${targetLabel}` }, 400, request);
 
         if (!orderIds.length)  return json({ ok: false, error: 'orderIds مطلوب' }, 400, request);
         const tooManyUpdate = tooManyIds(orderIds);
@@ -2394,7 +2514,7 @@ export default {
         const labelCfg = TARGET_LABELS[targetLabel];
         if (!labelCfg)          return json({ ok: false, error: `targetLabel غير معروف: ${targetLabel}` }, 400, request);
         if (!employee)          return json({ ok: false, error: 'employee مطلوب' }, 400, request);
-        if (labelCfg.needsCourier && !courier)
+        if (labelCfg.needsCourier && !bodyCourier && !showroomFlow)
           return json({ ok: false, error: 'المندوب مطلوب لهذه الحالة' }, 400, request);
 
         // "Returned" can resolve to S1 or S2 per order — the S2 path (Returned_S2)
@@ -2463,6 +2583,9 @@ export default {
             actions: [], warnings: [], resolvedField: null, resolvedLabel: null,
             s1Before: order?.s1 || null, s2Before: order?.s2 || null,
             reason: reasonForRow,
+            // v4.9.0 — مسار الشو روم: المندوب هو القيمة الفعلية على الأوردر (مش نص مكتوب)،
+            // عشان extra.courier يطابق custom.courier ويظهر في تسليمات التحصيل.
+            courier: showroomFlow ? (order?.courier || null) : (bodyCourier || null),
             // v4.3.0 — 'operator' (الموظف اختار قيمة جديدة) | 'existing' (السبب
             // كان مسجّل على شوبيفاي وما اتغيّرش) | null. بيتحدّد جوه applyDirect
             // بعد ما نعرف الـ specifier المتحل، وبيتكتب في extra.reasonSource.
@@ -2476,8 +2599,14 @@ export default {
             if (order.isCancelled && targetLabel !== 'Cancelled' && targetLabel !== 'Returned')
               throw new Error('الأوردر ملغي على Shopify');
 
+            // v4.9.0 — مسار الشو روم: أهلية مخصوصة (Ready → Delivered/Returned) بدل جدول
+            // الانتقالات العادي. الأوردر المؤهل S2 عنده فاضي فالـ specifier = targetLabel (S1).
+            if (showroomFlow) {
+              const why = showroomIneligibility(order);
+              if (why) throw new Error(why);
+            }
             const specifier = resolveSpecifier(targetLabel, order.s1, order.s2);
-            if (!specifier || !isTransitionValid(specifier, order.s1, order.s2))
+            if (!specifier || (!showroomFlow && !isTransitionValid(specifier, order.s1, order.s2)))
               throw new Error(`انتقال غير مسموح: S1="${order.s1 || 'فارغ'}" / S2="${order.s2 || 'فارغ'}" → ${targetLabel}`);
 
             const spec = SPECIFIERS[specifier];
@@ -2491,7 +2620,7 @@ export default {
             if (specifier !== 'Cancelled' && specifier !== 'Returned') row.reason = null;
 
             const { warnings, cancelStartedAt, cancelJobId, effectiveReason, reasonSource } =
-              await applyDirect(env, token, order, specifier, courier, row.reason, row.actions, reasonChoices);
+              await applyDirect(env, token, order, specifier, row.courier, row.reason, row.actions, reasonChoices, showroomFlow);
             row.warnings = warnings;
             row.status   = warnings.length ? 'warning' : 'success';
             // v4.3.0 — السبب اللي بيتسجّل هو السبب **الفعلي** للأوردر: اللي
@@ -2548,9 +2677,9 @@ export default {
             ? ` · سبب: ${row.reason}${row.reasonSource === 'existing' ? ' (مسجّل مسبقًا)' : ''}`
             : '';
           if (row.status === 'success') {
-            notesParts.push(`${spec.field}=${spec.label}${courier ? ` · ${courier}` : ''}${reasonNote}`);
+            notesParts.push(`${showroomFlow ? '🏬 ' : ''}${spec.field}=${spec.label}${row.courier ? ` · ${row.courier}` : ''}${reasonNote}`);
           } else if (row.status === 'warning') {
-            notesParts.push(`⚠ تم جزئيًا: ${spec.field}=${spec.label}${courier ? ` · ${courier}` : ''}${reasonNote}`);
+            notesParts.push(`⚠ تم جزئيًا: ${spec.field}=${spec.label}${row.courier ? ` · ${row.courier}` : ''}${reasonNote}`);
             notesParts.push(row.warnings.join(' | '));
           } else {
             notesParts.push(`فشل: ${row.error}`);
@@ -2578,7 +2707,9 @@ export default {
               extra: {
                 batchId, targetLabel,
                 field: spec?.field || null, statusLabel: spec?.label || null,
-                courier: courier || null, writeMode: 'direct',
+                courier: row.courier || null, writeMode: 'direct',
+                // v4.9.0 — مفتاح **مضاف**: مسار الشو روم (بدون Shipped). مفيش مفتاح قديم اتغيّر.
+                ...(showroomFlow ? { flow: 'showroom' } : {}),
                 result: row.status, error: row.error, warnings: row.warnings,
                 actions: row.actions,
                 s1Before: row.s1Before, s2Before: row.s2Before,

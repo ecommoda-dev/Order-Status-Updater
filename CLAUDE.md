@@ -8,7 +8,7 @@
 مرحلة الأوردر — دورة S1 (`custom.manual_status`) ودورة الإرجاع/الاستبدال S2
 (`custom.status_2_r_e`) — مع المندوب وتاريخ الاستلام وسبب الإلغاء/الإرجاع.
 **مين بيستخدمها:** مخزن · عمليات
-**الإصدار:** Worker `v4.8.0`   ← 🔴 **ريبو Worker وبس** — الواجهة النسخة الوحيدة في `Delivery-COD-Operations-Center` (`Order-Status-Updater.html`، هب الشحن v2.6.0)
+**الإصدار:** Worker `v4.9.0`   ← 🔴 **ريبو Worker وبس** — الواجهة النسخة الوحيدة في `Delivery-COD-Operations-Center` (`Order-Status-Updater.html`، هب الشحن v2.6.0)
 
 ## 🔴 الريبو ده Worker وبس — الواجهة في مركز الشحن والتحصيل (18-11-2026)
 
@@ -28,7 +28,7 @@
   بنفس `§CONTRACT::extra` (و`cod-payment-center-worker` لسه بيقراها). اللي اتزاد في v4.8.0 إضافي بس (تحت).
 - 🔴 **التعديل على منطق الأداة وواجهتها بيتعمل في مكانين مختلفين:** الواجهة في ريبو المركز مباشرة (مفيش مولّد ولا `port-standalone.py`)،
   والـ Worker هنا. و**`ECO_WORKERS.orderStatus.min` في `shared/hub-config.js` بالمركز لازم يتزامن** مع أي حقل/endpoint الواجهة بتعتمد عليه
-  (دلوقتي `4.8.0`) — ⛔ وانشر الـ Worker (merge ← Deploy) **قبل** الصفحة.
+  (دلوقتي `4.9.0`) — ⛔ وانشر الـ Worker (merge ← Deploy) **قبل** الصفحة.
 - ⚠️ **الجداول المتكرّرة (`TRANSITION_RULES` · `TRANSITION_SOURCES` · `resolveSpecifier`) لسه في مكانين:** `index.js` هنا ونسخة في
   `Order-Status-Updater.html` بالمركز (الواجهة بتحسم S1/S2 قبل ما تبعت). أي تعديل في قاعدة انتقال لازم ينزل على الاتنين في نفس التسليم —
   دلوقتي **في ريبوين مختلفين**، فلا فحص آلي بيمسك الفرق بينهم.
@@ -404,6 +404,22 @@ git show b1e37b4:3.5.0.html
 | ecommoda-order-lifecycle | v1.8.0 |
 
 آخر مطابقة: 18-11-2026 · `index.js` v4.8.0
+
+## 🏬 v4.9.0 — مسار الشو روم: Delivered/Returned مباشرة من Ready بعد Fulfillment (طلب أحمد 25-11-2026)
+
+**كله إضافي — مفيش اسم قديم اتغيّر.** الواجهة (تاب «🏬 الشو روم») في `Delivery-COD-Operations-Center` v2.17.0 — **انشر الـ Worker قبل الصفحة** (`ECO_WORKERS.orderStatus.min = 4.9.0`).
+
+| الجديد | بيعمل إيه |
+|---|---|
+| `update_status` + `flow:'showroom'` | `Delivered`/`Returned` بس (غير كده 400). الـ Worker بيعيد قراءة الأوردر ويحكم بـ `showroomIneligibility`: S1=`Ready` · S2 فاضي · `custom.zone` و`custom.courier` شو روم (تطبيع: بلا حروف كبيرة/`_`/مسافات) · مش ملغي. غير المؤهل = error بسببه بلا أي كتابة. **بيتخطّى `TRANSITION_RULES`** (Ready → Delivered مش فيها) — بدون `flow` الانتقال لسه ممنوع (بند في الفحص) |
+| `search_showroom_orders` (POST) | الأوردرات المؤهلة (Ready + zone + courier، S2 الفاضي بيتفلتر في الـ Worker لأن شوبيفاي مابتبحثش على ميتافيلد فاضي) — قراءة بحتة |
+| `order_statuses` → `zone` | حقل جديد مضاف (الواجهة بتحكم بيه للعرض) |
+| `extra.flow='showroom'` | مفتاح **مضاف** على صفوف D1 + «🏬» في `notes` |
+
+- 🔴 **الـ Fulfillment قبل أي كتابة وfail-closed** (`fulfillBeforeWrite`): FO مفتوح ← `fulfillmentCreate`؛ مفيش FO مفتوح والأوردر `FULFILLED` ← تخطّي (إعادة محاولة آمنة)؛ غير كده (FO على hold مثلاً) ← **error بلا أي تغيير**. **عكس `Shipped` العادي** (الحالة الأول وفشل الـ fulfillment warning) — هنا الأوردر لسه `Ready` فإعادة المحاولة آمنة. `Returned`: fulfillment ← `orderCancel(restock)` ← الحالة، عشان event الـ Fulfillment يظهر على الأوردر (طلب أحمد). `pickup_date` **ماتكتبش** (قرار أحمد). `package_whereabouts` زي المسار العادي.
+- ✅ **عقد التحصيل ما اتغيّرش:** `targetLabel` · `courier` · `result` · `timestamp` بنفس القيم؛ `extra.courier` = قيمة `custom.courier` **الفعلية على الأوردر** (مش اللي الواجهة بعتته). متأكَّد من `§TODAY-IMPORT` في `cod-payment-center` (25-11-2026): مابيقراش `s1Before` ولا `field`، فصف Delivered/Showroom بيظهر في تسليمات اليوم.
+- ⛔ **S1 فقط.** S2 مؤجّل (مفيش `Delivered` في S2 أصلاً).
+- ✅ الفحص: `node --no-warnings showroom-check.mjs` (**37** — الـ Worker الفعلي على Shopify/D1 وهميين: الأهلية · ترتيب الأفعال · fail-closed · idempotency · عقد D1) · `log-filters-check.mjs` 40. ⚠️ **ما اتجرّبش على شوبيفاي حقيقية** — أول أوردر شو روم حقيقي بعد النشر هو الاختبار (اتأكد إن event الـ Fulfillment ظاهر).
 
 ## 🆕 v4.8.0 — فلاتر السجل على معيار الجداول v8.6.0 (طلب أحمد 18-11-2026)
 
